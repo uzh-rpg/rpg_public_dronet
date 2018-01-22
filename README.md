@@ -7,12 +7,12 @@ Due to the danger that flying a drone can cause in an urban environment, collect
 ### Model
 DroNet has been designed as a forked CNN that predicts, from a single 200×200 frame in gray-scale, a steering angle and a collision probability. The shared part of the architecture consists of a fast ResNet-8 with 3 residual blocks, followed by dropout and ReLU non-linearity. After them, the network branches into two separated fully-connected layers, one to carry out steering prediction, and the other one to infer collision probability. See ```cnn_models.py``` for more details.
 
-![architecture](https://github.com/uzh-rpg/forest-navigation-learning/blob/clean_code/images/architecture.png)
+![architecture](./images/architecture.png)
 
 ### Data
 In order to learn steering angles, the publicly available [Udacity dataset](https://github.com/udacity/self-driving-car/tree/master/datasets/CH2) has been used. It provides several hours of video recorded from a car. We additionally recorded an outdoor dataset to learn the probability of collision by riding a bicycle in the streets of our city.
 
-![dataset](https://github.com/uzh-rpg/forest-navigation-learning/blob/clean_code/images/dataset.png)
+![dataset](./images/dataset.png)
 
 ## Running the code
 
