@@ -4,6 +4,9 @@ This repository contains the code used to train and evaluate DroNet, a convoluti
 #### Citing
 
 If you use DroNet in an academic context, please cite the following publication:
+Paper: [DroNet:Learning to Fly by Driving](http://rpg.ifi.uzh.ch/docs/RAL18_Loquercio.pdf)
+Video: [YouTube](https://youtu.be/ow7aw9H4BcA)
+
 ```
 @article{Loquercio_2018,
 	doi = {10.1109/lra.2018.2795643},
