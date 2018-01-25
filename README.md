@@ -1,6 +1,18 @@
 # DroNet: Learning to fly by driving
 This repository contains the code used to train and evaluate DroNet, a convolutional neural network that can safely drive a drone along the streets of a city.
 
+#### Citing
+
+If you use DroNet in an academic context, please cite the following publication:
+
+@article{Loquercio_2018,
+	doi = {10.1109/lra.2018.2795643},
+	year = 2018,
+	author = {Antonio Loquercio and Ana Isabel Maqueda and Carlos R. Del Blanco and Davide Scaramuzza},
+	title = {Dronet: Learning to Fly by Driving},
+	journal = {{IEEE} Robotics and Automation Letters}
+}
+
 ## Introduction
 Due to the danger that flying a drone can cause in an urban environment, collecting training data results impossible. For that reason, DroNet learns how to fly by imitating the behavior of manned vehicles that are already integrated in such environment. It produces a steering angle and a collision probability for the current input image captured by a forward-looking camera. Then, these high-level commands are transferred to control commands so that the drone keeps navigating, while avoiding obstacles.
 
