@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package format="2">
+	<name>dronet_control</name>
+	<version>0.0.0</version>
+	<description>dronet_control</description>
+	
+	<maintainer email="loquercio@ifi.uzh.ch">Antonio Loquercio</maintainer>
+	<license>MIT</license>
+	
+	<buildtool_depend>catkin</buildtool_depend>
+	<buildtool_depend>catkin_simple</buildtool_depend>
+	
+	<depend>quad_cmake</depend>
+	<depend>roscpp</depend>
+	<depend>eigen_catkin</depend>
+	
+	<depend>geometry_msgs</depend>
+	<depend>dronet_perception</depend>
+	
+	<export>
+		
+	</export>
+</package>

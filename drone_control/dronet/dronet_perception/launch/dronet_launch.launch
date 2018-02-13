@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="namespace" default="bebop" />
+    <node name="dronet_perception" pkg="dronet_perception" type="dronet_node.py" output="screen">      
+        <remap from="cnn_predictions" to="/cnn_out/predictions"/>
+        <remap from="state_change" to="$(arg namespace)/state_change"/>
+        <remap from="camera" to="$(arg namespace)/image_raw"/>
+        <remap from="land" to="$(arg namespace)/land"/>
+        <param name="json_model_path" value="$(find dronet_perception)/models/model_struct.json"/>
+        <param name="weights_path" value="$(find dronet_perception)/models/model_weights_59.h5"/>
+        <param name="onboard_images_folder" value="$(find dronet_perception)/onboard_images"/>
+        <param name="target_size" value="320, 240"/>
+        <param name="crop_size" value="200,200"/>
+
+  </node>
+
+</launch>
+

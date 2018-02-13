@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="namespace" default="bebop" />
+    <arg name="ip" default="192.168.42.1" />
+    <arg name="drone_type" default="bebop2" /> <!-- available drone types: bebop1, bebop2 -->
+    <arg name="config_file" default="$(find bebop_driver)/config/outdoor.yaml" />
+    <arg name="camera_info_url" default="package://bebop_driver/data/$(arg drone_type)_camera_calib.yaml" />
+    <group ns="$(arg namespace)">
+        <!-- nodelet manager -->
+        <node pkg="nodelet" type="nodelet" name="bebop_nodelet_manager" args="manager" output="screen"/>
+        <!-- bebop_nodelet -->
+        <node pkg="nodelet" type="nodelet" name="bebop_nodelet"
+          args="load bebop_driver/BebopDriverNodelet bebop_nodelet_manager">
+            <param name="camera_info_url" value="$(arg camera_info_url)" />
+            <param name="bebop_ip" value="$(arg ip)" />
+            <rosparam command="load" file="$(arg config_file)" />
+        </node>
+        <include file="$(find bebop_description)/launch/description.launch" />
+    </group>
+
+    <!-- DroNet -->
+
+    <node pkg="dronet_perception" name="dronet_perception" type="dronet_node.py" output="screen" launch-prefix="xterm -e" >   
+        <remap from="cnn_predictions" to="/cnn_out/predictions"/>
+        <remap from="state_change" to="$(arg namespace)/state_change"/>
+        <remap from="camera" to="$(arg namespace)/image_raw"/>
+        <remap from="land" to="$(arg namespace)/land"/>
+        <param name="json_model_path" value="$(find dronet_perception)/models/model_struct.json"/>
+        <param name="weights_path" value="$(find dronet_perception)/models/model_weights_59.h5"/>
+        <param name="onboard_images_folder" value="$(find dronet_perception)/onboard_images"/>
+        <param name="target_size" value="320,240"/>
+        <param name="crop_size" value="200,200"/>
+
+    </node>`
+
+</launch>
