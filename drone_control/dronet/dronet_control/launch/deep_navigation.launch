@@ -1,0 +1,11 @@
+<launch>
+	<node pkg="dronet_control" name="dronet_control" type="dronet_control" output="screen"> 
+        	<remap from="cnn_predictions" to="/cnn_out/predictions"/>
+        	<remap from="state_change" to="/bebop/state_change"/>
+        	<remap from="velocity" to="/bebop/cmd_vel/"/>
+        	<param name="alpha_yaw" value="0.7"/>
+        	<param name="alpha_velocity" value=".4"/>
+        	<param name="max_forward_index" value="0.4"/>
+        	<param name="critical_prob" value="1.3"/>
+	</node>
+</launch>
