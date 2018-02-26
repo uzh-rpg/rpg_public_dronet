@@ -42,7 +42,11 @@ void deepNavigation::run()
 
     // Desired body frame velocity to world frame
     double desired_forward_velocity_m = (1.0 -  probability_of_collision_) * max_forward_index_;
-    assert(desired_forward_velocity_m <= 1.0);
+    if (desired_forward_velocity_m <= 0.0)
+    {
+      ROS_INFO("Detected negative forward velocity! Drone will now stop!");
+      desired_forward_velocity_m  = 0;
+    }
 
     // Low pass filter the velocity and integrate it to get the position
     desired_forward_velocity_ = (1.0 - alpha_velocity_) * desired_forward_velocity_
