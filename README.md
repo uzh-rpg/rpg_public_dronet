@@ -139,3 +139,7 @@ To evaluate it, use the following command:
 ```
 python evaluation.py --experiment_rootdir=PATH_TO_FOLDER --weights_fname=best_weights.h5 --test_dir='../testing' 
 ```
+
+### Test dronet on a real robot
+In the folder [drone_control](./drone_control/dronet) you can find instructions on how to use DroNet to fly a [Bebop](http://global.parrot.com/au/products/bebop-drone/) drone.
+
