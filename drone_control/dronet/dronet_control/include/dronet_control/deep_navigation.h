@@ -1,27 +1,21 @@
 #pragma once
 
-#include "ros/ros.h"
-#include "std_msgs/Bool.h"
-
-#include "std_msgs/Empty.h"
-
-
-#include "geometry_msgs/Twist.h"
-
+#include <ros/ros.h>
+#include <std_msgs/Bool.h>
+#include <std_msgs/Empty.h>
+#include <geometry_msgs/Twist.h>
 #include "dronet_perception/CNN_out.h"
 
 namespace deep_navigation
 {
 
-class deepNavigation
+class deepNavigation final
 {
 
 public:
   deepNavigation(const ros::NodeHandle& nh,
                  const ros::NodeHandle& nh_private);
   deepNavigation() : deepNavigation(ros::NodeHandle(), ros::NodeHandle("~") ) {}
-
-  virtual ~deepNavigation();
 
   void run();
 
