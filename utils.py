@@ -168,8 +168,8 @@ class DroneDirectoryIterator(Iterator):
             The next batch of images and labels.
         """
         with self.lock:
-            index_array, current_index, current_batch_size = next(
-                                                           self.index_generator)
+            index_array = next(self.index_generator)
+            current_batch_size = index_array.shape[0]
 
         # Image transformation is not under thread lock, so it can be done in
         # parallel

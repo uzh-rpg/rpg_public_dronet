@@ -39,7 +39,7 @@ This code has been tested on Ubuntu 14.04, and on Python 3.4.
 
 Dependencies:
 * TensorFlow 1.0.1
-* Keras 2.0.3 (Make sure that the Keras version is correct!)
+* Keras 2.1.4 (Make sure that the Keras version is correct!)
 * NumPy 1.12.1
 * OpenCV 3.1.0
 * scikit-learn 0.18.1
