@@ -3,7 +3,6 @@ project(dronet_control)
 
 find_package(catkin_simple REQUIRED)
 catkin_simple()
-quad_cmake_setup()
 
 
 cs_add_executable(dronet_control src/deep_navigation.cpp)
