@@ -38,7 +38,7 @@ In order to learn steering angles, the publicly available [Udacity dataset](http
 This code has been tested on Ubuntu 14.04, and on Python 3.4.
 
 Dependencies:
-* TensorFlow 1.0.1
+* TensorFlow 1.5.0
 * Keras 2.1.4 (Make sure that the Keras version is correct!)
 * NumPy 1.12.1
 * OpenCV 3.1.0
