@@ -24,6 +24,8 @@ To do it, just follow [these instructions](http://bebop-autonomy.readthedocs.io/
 
 ___Be sure to read properly all the instructions about how to run the driver, how to send commands and how to read data from the drone available on the website!___
 
+You will need a modified parameter file to launch the bebop autonomy package for dronet. You can find it in here: [outdoor.yaml](https://github.com/uzh-rpg/rpg_public_dronet/blob/master/drone_control/dronet/configs/outdoor.yaml).
+
 ### Step 4: Install DroNet perception package
 
 After we're done with the bridge between ROS and Bebop, we now need to connect the DroNet Keras code to ROS. This is again very easy to do, since ROS has both a cpp and python interface.
