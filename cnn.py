@@ -5,7 +5,7 @@ import sys
 import gflags
 
 from keras.callbacks import ModelCheckpoint
-from keras.utils import plot_model
+from keras import optimizers
 
 import logz
 import cnn_models
@@ -18,14 +18,14 @@ from common_flags import FLAGS
 def getModel(img_width, img_height, img_channels, output_dim, weights_path):
     """
     Initialize model.
-    
+
     # Arguments
        img_width: Target image widht.
        img_height: Target image height.
        img_channels: Target image channels.
        output_dim: Dimension of model output.
        weights_path: Path to pre-trained model.
-       
+
     # Returns
        model: A Model instance.
     """
@@ -43,15 +43,15 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path):
 
 def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     """
-    Model training. 
-    
+    Model training.
+
     # Arguments
        train_data_generator: Training data generated batch by batch.
        val_data_generator: Validation data generated batch by batch.
        model: Target image channels.
-       initial_epoch: Dimension of model output.    
+       initial_epoch: Dimension of model output.
     """
-    
+
     # Initialize loss weights
     model.alpha = tf.Variable(1, trainable=False, name='alpha', dtype=tf.float32)
     model.beta = tf.Variable(0, trainable=False, name='beta', dtype=tf.float32)
@@ -60,10 +60,13 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
+
+    optimizer = optimizers.Adam(decay=1e-5)
+
     # Configure training process
     model.compile(loss=[utils.hard_mining_mse(model.k_mse),
                         utils.hard_mining_entropy(model.k_entropy)],
-                        optimizer='adam', decay=1e-5, loss_weights=[model.alpha, model.beta])
+                        optimizer=optimizer, loss_weights=[model.alpha, model.beta])
 
     # Save model with the lowest validation loss
     weights_path = os.path.join(FLAGS.experiment_rootdir, 'weights_{epoch:03d}.h5')
@@ -80,7 +83,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # Train model
     steps_per_epoch = int(np.ceil(train_data_generator.samples / FLAGS.batch_size))
     validation_steps = int(np.ceil(val_data_generator.samples / FLAGS.batch_size))
-    
+
     model.fit_generator(train_data_generator,
                         epochs=FLAGS.epochs, steps_per_epoch = steps_per_epoch,
                         callbacks=[writeBestModel, saveModelAndLoss],
@@ -97,7 +100,7 @@ def _main():
 
     # Input image dimensions
     img_width, img_height = FLAGS.img_width, FLAGS.img_height
-    
+
     # Cropped image dimensions
     crop_img_width, crop_img_height = FLAGS.crop_img_width, FLAGS.crop_img_height
 
@@ -108,7 +111,7 @@ def _main():
         img_channels = 1
     else:
         raise IOError("Unidentified image mode: use 'grayscale' or 'rgb'")
-        
+
     # Output dimension (one for steering and one for collision)
     output_dim = 1
 
@@ -148,10 +151,6 @@ def _main():
     # Define model
     model = getModel(crop_img_width, crop_img_height, img_channels,
                         output_dim, weights_path)
-
-    # Save the architecture of the model as png
-    plot_arch_path = os.path.join(FLAGS.experiment_rootdir, 'architecture.png')
-    plot_model(model, to_file=plot_arch_path)
 
     # Serialize model into json
     json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)

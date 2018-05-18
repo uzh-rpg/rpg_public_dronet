@@ -34,7 +34,6 @@ class DroneDataGenerator(ImageDataGenerator):
                 follow_links=follow_links)
 
 
-
 class DroneDirectoryIterator(Iterator):
     """
     Class for managing data loading.of images and labels
@@ -160,17 +159,22 @@ class DroneDirectoryIterator(Iterator):
                     self.exp_type.append(exp_type)
                     self.samples += 1
 
+
     def next(self):
+        with self.lock:
+            index_array = next(self.index_generator)
+        # The transformation of images is not under thread lock
+        # so it can be done in parallel
+        return self._get_batches_of_transformed_samples(index_array)
+
+    def _get_batches_of_transformed_samples(self, index_array) :
         """
         Public function to fetch next batch.
 
         # Returns
             The next batch of images and labels.
         """
-        with self.lock:
-            index_array = next(self.index_generator)
-            current_batch_size = index_array.shape[0]
-
+        current_batch_size = index_array.shape[0]
         # Image transformation is not under thread lock, so it can be done in
         # parallel
         batch_x = np.zeros((current_batch_size,) + self.image_shape,
@@ -208,7 +212,6 @@ class DroneDirectoryIterator(Iterator):
 
         batch_y = [batch_steer, batch_coll]
         return batch_x, batch_y
-
 
 
 def compute_predictions_and_gt(model, generator, steps,
@@ -396,7 +399,6 @@ def modelToJson(model, json_model_path):
 
     with open(json_model_path,"w") as f:
         f.write(model_json)
-
 
 
 def jsonToModel(json_model_path):
