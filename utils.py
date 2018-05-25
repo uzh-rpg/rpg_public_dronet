@@ -377,7 +377,7 @@ def hard_mining_entropy(k):
             true_coll = y_true[:,1]
 
             # Collision loss
-            l_coll = tf.multiply((1-t), K.binary_crossentropy(pred_coll, true_coll))
+            l_coll = tf.multiply((1-t), K.binary_crossentropy(true_coll, pred_coll))
 
             # Hard mining
             k_min = tf.minimum(k, n_samples_coll)
