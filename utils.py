@@ -450,7 +450,7 @@ def compute_predictions_and_gt(model, generator, steps,
 
 def hard_mining_mse(k):
     """
-    Compute MSE for steering evaluation and hard-mining for the current batch.
+    Compute MSE for gate localization evaluation and hard-mining for the current batch.
 
     # Arguments
         k: number of samples for hard-mining.
@@ -463,27 +463,27 @@ def hard_mining_mse(k):
         # Parameter t indicates the type of experiment
         t = y_true[:,0]
 
-        # Number of steering samples
-        samples_steer = tf.cast(tf.equal(t,1), tf.int32)
-        n_samples_steer = tf.reduce_sum(samples_steer)
+        # Number of gate localization samples
+        samples_loc = tf.cast(tf.equal(t,1), tf.int32)
+        n_samples_loc = tf.reduce_sum(samples_loc)
 
-        if n_samples_steer == 0:
+        if n_samples_loc == 0:
             return 0.0
         else:
-            # Predicted and real steerings
-            pred_steer = tf.squeeze(y_pred, squeeze_dims=-1)
-            true_steer = y_true[:,1]
+            # Predicted and real localizations
+            pred_loc = tf.squeeze(y_pred, squeeze_dims=-1)
+            true_loc = y_true[:,1]
 
-            # Steering loss
-            l_steer = tf.multiply(t, K.square(pred_steer - true_steer))
+            # localization loss
+            l_loc = tf.multiply(t, K.square(pred_loc - true_loc))
 
             # Hard mining
-            k_min = tf.minimum(k, n_samples_steer)
-            _, indices = tf.nn.top_k(l_steer, k=k_min)
-            max_l_steer = tf.gather(l_steer, indices)
-            hard_l_steer = tf.divide(tf.reduce_sum(max_l_steer), tf.cast(k,tf.float32))
+            k_min = tf.minimum(k, n_samples_loc)
+            _, indices = tf.nn.top_k(l_loc, k=k_min)
+            max_l_loc = tf.gather(l_loc, indices)
+            hard_l_loc = tf.divide(tf.reduce_sum(max_l_loc), tf.cast(k,tf.float32))
 
-            return hard_l_steer
+            return hard_l_loc
 
     return custom_mse
 
@@ -491,7 +491,7 @@ def hard_mining_mse(k):
 
 def hard_mining_entropy(k):
     """
-    Compute binary cross-entropy for collision evaluation and hard-mining.
+    Compute binary cross-entropy for gate detection evaluation and hard-mining.
 
     # Arguments
         k: Number of samples for hard-mining.
@@ -504,27 +504,27 @@ def hard_mining_entropy(k):
         # Parameter t indicates the type of experiment
         t = y_true[:,0]
 
-        # Number of collision samples
-        samples_coll = tf.cast(tf.equal(t,0), tf.int32)
-        n_samples_coll = tf.reduce_sum(samples_coll)
+        # Number of gate detection samples
+        samples_detec = tf.cast(tf.equal(t,0), tf.int32)
+        n_samples_detec = tf.reduce_sum(samples_detec)
 
-        if n_samples_coll == 0:
+        if n_samples_detec == 0:
             return 0.0
         else:
             # Predicted and real labels
-            pred_coll = tf.squeeze(y_pred, squeeze_dims=-1)
-            true_coll = y_true[:,1]
+            pred_detec = tf.squeeze(y_pred, squeeze_dims=-1)
+            true_detec = y_true[:,1]
 
-            # Collision loss
-            l_coll = tf.multiply((1-t), K.binary_crossentropy(true_coll, pred_coll))
+            # gate detection loss
+            l_detec = tf.multiply((1-t), K.binary_crossentropy(true_detec, pred_detec))
 
             # Hard mining
-            k_min = tf.minimum(k, n_samples_coll)
-            _, indices = tf.nn.top_k(l_coll, k=k_min)
-            max_l_coll = tf.gather(l_coll, indices)
-            hard_l_coll = tf.divide(tf.reduce_sum(max_l_coll), tf.cast(k, tf.float32))
+            k_min = tf.minimum(k, n_samples_detec)
+            _, indices = tf.nn.top_k(l_detec, k=k_min)
+            max_l_detec = tf.gather(l_detec, indices)
+            hard_l_detec = tf.divide(tf.reduce_sum(max_l_detec), tf.cast(k, tf.float32))
 
-            return hard_l_coll
+            return hard_l_detec
 
     return custom_bin_crossentropy
 
