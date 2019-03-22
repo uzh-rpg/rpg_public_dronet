@@ -54,19 +54,19 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
 
     # Initialize loss weights
     model.alpha = tf.Variable(1, trainable=False, name='alpha', dtype=tf.float32)
-    model.beta = tf.Variable(0, trainable=False, name='beta', dtype=tf.float32)
+    # model.beta = tf.Variable(0, trainable=False, name='beta', dtype=tf.float32)
 
     # Initialize number of samples for hard-mining
     model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
-    model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
+    # model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
 
     optimizer = optimizers.Adam(decay=1e-5)
 
     # Configure training process
-    model.compile(loss=[utils.hard_mining_mse(model.k_mse),
-                        utils.hard_mining_entropy(model.k_entropy)],
-                        optimizer=optimizer, loss_weights=[model.alpha, model.beta])
+    model.compile(loss=[utils.hard_mining_mse(model.k_mse)],
+                        # utils.hard_mining_entropy(model.k_entropy)],
+                        optimizer=optimizer, loss_weights=[model.alpha])
 
     # Save model with the lowest validation loss
     weights_path = os.path.join(FLAGS.experiment_rootdir, 'weights_{epoch:03d}.h5')
@@ -117,29 +117,34 @@ def _main():
 
     # Generate training data with real-time augmentation
     train_datagen = utils.DroneDataGenerator(rotation_range = 0.2,
-                                             rescale = 1./255,
+                                             # rescale = 1./255,
+                                             vertical_flip = True,
                                              width_shift_range = 0.2,
                                              height_shift_range=0.2)
 
     if FLAGS.no_crop:
         crop_size = None
+        crop_img_height = img_height
+        crop_img_width = img_width
     else:
         crop_size = (crop_img_height, crop_img_width)
 
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
                                                         shuffle = True,
                                                         color_mode=FLAGS.img_mode,
-                                                        target_size=(img_width, img_height),
+                                                        target_size=(img_height,
+                                                                     img_width),
                                                         crop_size= crop_size,
                                                         batch_size = FLAGS.batch_size)
 
     # Generate validation data with real-time augmentation
-    val_datagen = utils.DroneDataGenerator(rescale = 1./255)
+    val_datagen = utils.DroneDataGenerator()#rescale = 1./255)
 
     val_generator = val_datagen.flow_from_directory(FLAGS.val_dir,
                                                         shuffle = True,
                                                         color_mode=FLAGS.img_mode,
-                                                        target_size=(img_width, img_height),
+                                                        target_size=(img_height,
+                                                                     img_width),
                                                         crop_size= crop_size,
                                                         batch_size = FLAGS.batch_size)
 

@@ -28,7 +28,7 @@ def load_img(path, grayscale=False, target_size=None, crop_size=None):
         if (img.shape[0], img.shape[1]) != target_size:
             img = cv2.resize(img, target_size)
 
-    if crop_size:
+    if crop_size and crop_size != target_size:
         img = central_image_crop(img, crop_size[0], crop_size[1])
 
     if grayscale:
