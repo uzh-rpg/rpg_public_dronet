@@ -10,13 +10,13 @@ from keras import regularizers
 def resnet8(img_width, img_height, img_channels, output_dim):
     """
     Define model architecture.
-    
+
     # Arguments
        img_width: Target image widht.
        img_height: Target image height.
        img_channels: Target image channels.
        output_dim: Dimension of model output.
-       
+
     # Returns
        model: A Model instance.
     """
@@ -79,15 +79,11 @@ def resnet8(img_width, img_height, img_channels, output_dim):
     x = Activation('relu')(x)
     x = Dropout(0.5)(x)
 
-    # Steering channel
-    steer = Dense(output_dim)(x)
-
-    # Collision channel
-    coll = Dense(output_dim)(x)
-    coll = Activation('sigmoid')(coll)
+    # Gate localization
+    localization = Dense(output_dim)(x) # No hidden layers ?
 
     # Define steering-collision model
-    model = Model(inputs=[img_input], outputs=[steer, coll])
+    model = Model(inputs=[img_input], outputs=[localization])
     print(model.summary())
 
     return model

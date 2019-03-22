@@ -91,7 +91,7 @@ def read_training_labels(file_name):
         labels = np.loadtxt(file_name, usecols=0)
         labels = np.array(labels)
     except:
-        print("File {} failed loading labels".format(file_name)) 
+        print("File {} failed loading labels".format(file_name))
     return labels
 
 
@@ -106,7 +106,7 @@ def count_samples_per_class(train_dir):
             num_class1 += np.sum(labels == 1)
             num_class0 += np.sum(labels == 0)
         except:
-            print("File {} failed loading labels".format(file_name)) 
+            print("File {} failed loading labels".format(file_name))
             continue
     return np.array([num_class0, num_class1])
 
@@ -135,7 +135,7 @@ def majority_class_baseline(real_values, samples_per_class):
     major_class = np.argmax(samples_per_class)
     return [major_class for i in real_values]
 
-            
+
 def compute_highest_classification_errors(predictions, real_values, n_errors=20):
     """
     Compute the indexes with highest error
@@ -207,7 +207,7 @@ def _main():
 
 
     # ************************* Steering evaluation ***************************
-    
+
     # Predicted and real steerings
     pred_steerings = predictions[t_mask,0]
     real_steerings = ground_truth[t_mask,0]
@@ -235,12 +235,12 @@ def _main():
 
 
     # *********************** Collision evaluation ****************************
-    
+
     # Predicted probabilities and real labels
     pred_prob = predictions[~t_mask,1]
     pred_labels = np.zeros_like(pred_prob)
     pred_labels[pred_prob >= 0.5] = 1
-               
+
     real_labels = ground_truth[~t_mask,1]
 
     # Compute random, weighted and majorirty-class baselines for collision

@@ -10,6 +10,7 @@ gflags.DEFINE_integer('img_height', 240, 'Target Image Height')
 
 gflags.DEFINE_integer('crop_img_width', 200, 'Cropped image widht')
 gflags.DEFINE_integer('crop_img_height', 200, 'Cropped image height')
+gflags.DEFINE_bool('no_crop', False, 'Whether to crop the input image')
 
 gflags.DEFINE_string('img_mode', "grayscale", 'Load mode for images, either '
                      'rgb or grayscale')
@@ -23,11 +24,11 @@ gflags.DEFINE_integer('initial_epoch', 0, 'Initial epoch to start training')
 # Files
 gflags.DEFINE_string('experiment_rootdir', "./model", 'Folder '
                      ' containing all the logs, model weights and results')
-gflags.DEFINE_string('train_dir', "../training", 'Folder containing'
+gflags.DEFINE_string('train_dir', "./training", 'Folder containing'
                      ' training experiments')
-gflags.DEFINE_string('val_dir', "../validation", 'Folder containing'
+gflags.DEFINE_string('val_dir', "./validation", 'Folder containing'
                      ' validation experiments')
-gflags.DEFINE_string('test_dir', "../testing", 'Folder containing'
+gflags.DEFINE_string('test_dir', "./testing", 'Folder containing'
                      ' testing experiments')
 
 # Model

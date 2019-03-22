@@ -9,21 +9,21 @@ from keras import backend as K
 class MyCallback(keras.callbacks.Callback):
     """
     Customized callback class.
-    
+
     # Arguments
        filepath: Path to save model.
        period: Frequency in epochs with which model is saved.
        batch_size: Number of images per batch.
     """
-    
+
     def __init__(self, filepath, period, batch_size):
         self.filepath = filepath
         self.period = period
         self.batch_size = batch_size
-        
+
 
     def on_epoch_begin(self, epoch, logs=None):
-        
+
         # Decrease weight for binary cross-entropy loss
         sess = K.get_session()
         self.model.beta.load(np.maximum(0.0, 1.0-np.exp(-1.0/10.0*(epoch-10))), sess)
@@ -34,7 +34,7 @@ class MyCallback(keras.callbacks.Callback):
 
 
     def on_epoch_end(self, epoch, logs={}):
-        
+
         # Save training and validation losses
         logz.log_tabular('train_loss', logs.get('loss'))
         logz.log_tabular('val_loss', logs.get('val_loss'))

@@ -6,7 +6,7 @@ import numpy as np
 def load_img(path, grayscale=False, target_size=None, crop_size=None):
     """
     Load an image.
-    
+
     # Arguments
         path: Path to image file.
         grayscale: Boolean, whether to load the image as grayscale.
@@ -14,7 +14,7 @@ def load_img(path, grayscale=False, target_size=None, crop_size=None):
             or tuple of ints `(img_width, img_height)`.
         crop_size: Either `None` (default to original size)
             or tuple of ints `(img_width, img_height)`.
-        
+
     # Returns
         Image as numpy array.
     """
@@ -42,11 +42,11 @@ def central_image_crop(img, crop_width=150, crop_heigth=150):
     """
     Crop the input image centered in width and starting from the bottom
     in height.
-    
+
     # Arguments:
         crop_width: Width of the crop.
         crop_heigth: Height of the crop.
-        
+
     # Returns:
         Cropped image.
     """

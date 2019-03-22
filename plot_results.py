@@ -15,7 +15,7 @@ def make_and_save_histograms(pred_steerings, real_steerings,
                              img_name = "histograms.png"):
     """
     Plot and save histograms from predicted steerings and real steerings.
-    
+
     # Arguments
         pred_steerings: List of predicted steerings.
         real_steerings: List of real steerings.
@@ -31,14 +31,14 @@ def make_and_save_histograms(pred_steerings, real_steerings,
     #plt.title('Steering angle')
     plt.legend(fontsize=10)
     plt.savefig(img_name, bbox_inches='tight')
-    
-    
+
+
 def plot_confusion_matrix(real_labels, pred_prob, classes,
                           normalize=False,
                           img_name="confusion.png"):
     """
     Plot and save confusion matrix computed from predicted and real labels.
-    
+
         # Arguments
         real_labels: List of real labels.
         pred_prob: List of predicted probabilities.
@@ -46,12 +46,12 @@ def plot_confusion_matrix(real_labels, pred_prob, classes,
         img_name: Name of the png file to save the figure.
     """
     real_labels = np.array(real_labels)
-    
+
     # Binarize predicted probabilities
     pred_prob = np.array(pred_prob)
     pred_labels = np.zeros_like(pred_prob)
     pred_labels[pred_prob >= 0.5] = 1
-    
+
     cm = confusion_matrix(real_labels, pred_labels)
     plt.figure()
     plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
@@ -74,17 +74,17 @@ def plot_confusion_matrix(real_labels, pred_prob, classes,
     plt.ylabel('True label')
     plt.xlabel('Predicted label')
     plt.savefig(img_name)
-    
-    
+
+
 def _main():
-    
+
     # Compute histograms from predicted and real steerings
     fname_steer = os.path.join(FLAGS.experiment_rootdir, 'predicted_and_real_steerings.json')
     with open(fname_steer,'r') as f1:
         dict_steerings = json.load(f1)
     make_and_save_histograms(dict_steerings['pred_steerings'], dict_steerings['real_steerings'],
                              os.path.join(FLAGS.experiment_rootdir, "histograms.png"))
-    
+
     # Compute confusion matrix from predicted and real labels
     fname_labels = os.path.join(FLAGS.experiment_rootdir,'predicted_and_real_labels.json')
     with open(fname_labels,'r') as f2:

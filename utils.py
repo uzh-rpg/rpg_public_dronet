@@ -35,8 +35,144 @@ class DroneDataGenerator(ImageDataGenerator):
 
 
 class DroneDirectoryIterator(Iterator):
+    '''
+    Class for managing data loading of images and labels.
+    The assumed folder structure is:
+        root_folder/
+            images/
+            annotations.csv
+
+    # Arguments
+       directory: Path to the root directory to read data from.
+       image_data_generator: Image Generator.
+       target_size: tuple of integers, dimensions to resize input images to.
+       crop_size: tuple of integers, dimensions to crop input images.
+       color_mode: One of `"rgb"`, `"grayscale"`. Color mode to read images.
+       batch_size: The desired batch size
+       shuffle: Whether to shuffle data or not
+       seed : numpy seed to shuffle data
+       follow_links: Bool, whether to follow symbolic links or not
+
+    # TODO: Add functionality to save images to have a look at the augmentation
+    '''
+    def __init__(self, directory, image_data_generator,
+            target_size=(224,224), crop_size = (250,250), color_mode='grayscale',
+            batch_size=32, shuffle=True, seed=None, follow_links=False):
+        self.samples = 0
+        self.directory = directory
+        self.image_data_generator = image_data_generator
+        self.target_size = tuple(target_size)
+        if crop_size:
+            self.crop_size = tuple(crop_size)
+        else:
+            self.crop_size = tuple(target_size)
+        self.follow_links = follow_links
+        if color_mode not in {'rgb', 'grayscale'}:
+            raise ValueError('Invalid color mode:', color_mode,
+                             '; expected "rgb" or "grayscale".')
+        self.color_mode = color_mode
+        if self.color_mode == 'rgb':
+            self.image_shape = self.crop_size + (3,)
+        else:
+            self.image_shape = self.crop_size + (1,)
+
+        # Idea = associate each filename with a corresponding steering or label
+        self.filenames = []
+        self.ground_truth_loc = []
+        self.ground_truth_rot = []
+
+        self._parse_training_dir(directory)
+
+        # Conversion of list into array
+        self.ground_truth_loc = np.array(self.ground_truth_loc, dtype = K.floatx())
+        self.ground_truth_rot = np.array(self.ground_truth_rot, dtype = K.floatx())
+
+        assert self.samples > 0, "Empty dataset!"
+        super(DroneDirectoryIterator, self).__init__(self.samples,
+                batch_size, shuffle, seed)
+
+    def _parse_training_dir(self, path):
+        annotations_path = os.path.join(path, "annotations.csv")
+        images_path = os.path.join(path, "images")
+        loc_annotations = []
+        rot_annotations = []
+        with open(annotations_path, 'r') as annotations_file:
+            annotations_file.readline() # Skip the header
+            line = annotations_file.readline()
+            while line:
+                line.split(',')
+                loc_annotations[line[0]] = line[1:3]
+                rot_annotations[line[0]] = line[3]
+                line = annotations_file.readline()
+
+        if len(annotations) == 0:
+            print("[!] Annotations could not be loaded!")
+            raise Exception("Annotations not found")
+
+        for filename in os.listdir(images_path):
+            is_valid = False
+            for extension in self.formats:
+                if filename.lower().endswith('.' + extension):
+                    is_valid = True
+                    break
+                if is_valid:
+                    self.filenames.append(os.path.relpath(
+                        os.path.join(path, filename), self.directory))
+                    self.ground_truth_loc.append(loc_annotations[filename])
+                    self.ground_truth_rot.append(rot_annotations[filename])
+                    self.samples += 1
+
+    def next(self):
+        """
+        Public function to fetch next batch.
+
+        # Returns
+            The next batch of images and labels.
+        """
+        with self.lock:
+            index_array = next(self.index_generator)
+        # The transformation of images is not under thread lock
+        # so it can be done in parallel
+        return self._get_batches_of_transformed_samples(index_array)
+
+    # TODO: Batch orientation, detection (?)
+    def _get_batches_of_transformed_samples(self, index_array) :
+        current_batch_size = index_array.shape[0]
+        # Image transformation is not under thread lock, so it can be done in
+        # parallel
+        batch_x = np.zeros((current_batch_size,) + self.image_shape,
+                dtype=K.floatx())
+        batch_localization = np.zeros((current_batch_size, 2,),
+                dtype=K.floatx())
+        batch_orientation = np.zeros((current_batch_size, 2,),
+                dtype=K.floatx())
+        grayscale = self.color_mode == 'grayscale'
+
+        # Build batch of image data
+        for i, j in enumerate(index_array):
+            fname = self.filenames[j]
+            x = img_utils.load_img(os.path.join(self.directory, fname),
+                    grayscale=grayscale,
+                    crop_size=self.crop_size,
+                    target_size=self.target_size)
+
+            x = self.image_data_generator.random_transform(x)
+            x = self.image_data_generator.standardize(x)
+            batch_x[i] = x
+
+            # Build batch of localization and orientation data
+            batch_localization[i, 0] = 1.0 # TODO: Remove that ?
+            batch_localization[i, 1] = self.ground_truth_loc[index_array[i]]
+            batch_orientation[i, 0] = 0.0
+            batch_orientation[i, 1] = self.ground_truth_rot[index_array[1]]
+
+        batch_y = [batch_localization] # TODO: add batch_orientation
+        return batch_x, batch_y
+
+
+class DroneDirectoryIterator_Old(Iterator):
     """
-    Class for managing data loading.of images and labels
+    Class for managing data loading of images and labels
     We assume that the folder structure is:
     root_folder/
            folder_1/
@@ -70,7 +206,10 @@ class DroneDirectoryIterator(Iterator):
         self.directory = directory
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
-        self.crop_size = tuple(crop_size)
+        if crop_size:
+            self.crop_size = tuple(crop_size)
+        else:
+            self.crop_size = tuple(target_size)
         self.follow_links = follow_links
         if color_mode not in {'rgb', 'grayscale'}:
             raise ValueError('Invalid color mode:', color_mode,

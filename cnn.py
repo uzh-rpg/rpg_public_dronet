@@ -121,11 +121,16 @@ def _main():
                                              width_shift_range = 0.2,
                                              height_shift_range=0.2)
 
+    if FLAGS.no_crop:
+        crop_size = None
+    else:
+        crop_size = (crop_img_height, crop_img_width)
+
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
                                                         shuffle = True,
                                                         color_mode=FLAGS.img_mode,
                                                         target_size=(img_width, img_height),
-                                                        crop_size=(crop_img_height, crop_img_width),
+                                                        crop_size= crop_size,
                                                         batch_size = FLAGS.batch_size)
 
     # Generate validation data with real-time augmentation
@@ -135,7 +140,7 @@ def _main():
                                                         shuffle = True,
                                                         color_mode=FLAGS.img_mode,
                                                         target_size=(img_width, img_height),
-                                                        crop_size=(crop_img_height, crop_img_width),
+                                                        crop_size= crop_size,
                                                         batch_size = FLAGS.batch_size)
 
     # Weights to restore
@@ -165,7 +170,7 @@ def main(argv):
     try:
       argv = FLAGS(argv)  # parse flags
     except gflags.FlagsError:
-      print ('Usage: %s ARGS\\n%s' % (sys.argv[0], FLAGS))
+      print ('Usage: %s ARGS\n%s' % (sys.argv[0], FLAGS))
 
       sys.exit(1)
     _main()
