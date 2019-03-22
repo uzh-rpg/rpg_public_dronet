@@ -4,8 +4,9 @@ import os
 import sys
 import gflags
 
-from keras.callbacks import ModelCheckpoint
+from keras.callbacks import ModelCheckpoint, TensorBoard
 from keras import optimizers
+from time import time
 
 import logz
 import cnn_models
@@ -84,9 +85,12 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     steps_per_epoch = int(np.ceil(train_data_generator.samples / FLAGS.batch_size))
     validation_steps = int(np.ceil(val_data_generator.samples / FLAGS.batch_size))
 
+    tensorboard = TensorBoard(log_dir="logs/{}".format(time()))
+
     model.fit_generator(train_data_generator,
                         epochs=FLAGS.epochs, steps_per_epoch = steps_per_epoch,
-                        callbacks=[writeBestModel, saveModelAndLoss],
+                        callbacks=[writeBestModel, saveModelAndLoss,
+                                   tensorboard],
                         validation_data=val_data_generator,
                         validation_steps = validation_steps,
                         initial_epoch=initial_epoch)

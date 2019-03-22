@@ -154,7 +154,7 @@ class DroneDirectoryIterator(Iterator):
                 j = index + 1 # Start at 1
                 break
 
-        labels = [0 for i in range(self.nb_windows + 1)]
+        labels = [-1 for i in range(self.nb_windows + 1)]
         labels[int(i + ((j-1)*sqrt_win))] = 1
         return labels
 
@@ -329,7 +329,7 @@ def hard_mining_mse(k):
             pred_loc = y_pred[:,1]
 
             # localization loss
-            l_loc = tf.multiply(t, K.square(pred_loc - true_loc))
+            l_loc = tf.multiply(t, K.square(true_loc - pred_loc))
 
             # Hard mining
             k_min = tf.minimum(k, n_samples_loc)
