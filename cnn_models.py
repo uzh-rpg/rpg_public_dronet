@@ -80,7 +80,7 @@ def resnet8(img_width, img_height, img_channels, output_dim):
     x = Dropout(0.5)(x)
 
     # Gate localization
-    localization = Dense(output_dim)(x) # No hidden layers ?
+    localization = Dense(output_dim, activation='softmax')(x) # No hidden layers ?
 
     # Define steering-collision model
     model = Model(inputs=[img_input], outputs=[localization])

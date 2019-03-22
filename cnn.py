@@ -112,8 +112,8 @@ def _main():
     else:
         raise IOError("Unidentified image mode: use 'grayscale' or 'rgb'")
 
-    # Output dimension (one for steering and one for collision)
-    output_dim = 1
+    # Output dimension
+    output_dim = FLAGS.nb_windows + 1
 
     # Generate training data with real-time augmentation
     train_datagen = utils.DroneDataGenerator(rotation_range = 0.2,

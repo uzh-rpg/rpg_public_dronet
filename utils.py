@@ -124,7 +124,6 @@ class DroneDirectoryIterator(Iterator):
             if is_valid:
                 self.filenames.append(os.path.relpath(
                     os.path.join(images_path, filename), self.directory))
-                # print(loc_annotations[frame_no])
                 self.ground_truth_loc.append(loc_annotations[frame_no])
                 self.ground_truth_rot.append(rot_annotations[frame_no])
                 self.samples += 1
@@ -172,7 +171,7 @@ class DroneDirectoryIterator(Iterator):
         # so it can be done in parallel
         return self._get_batches_of_transformed_samples(index_array)
 
-    # TODO: Batch orientation, detection (?)
+    # TODO: Batch orientation
     def _get_batches_of_transformed_samples(self, index_array) :
         current_batch_size = index_array.shape[0]
         # Image transformation is not under thread lock, so it can be done in
@@ -325,8 +324,9 @@ def hard_mining_mse(k):
             return 0.0
         else:
             # Predicted and real localizations
-            pred_loc = tf.squeeze(y_pred, squeeze_dims=-1)
+            # pred_loc = tf.squeeze(y_pred, squeeze_dims=-1)
             true_loc = y_true[:,1]
+            pred_loc = y_pred[:,1]
 
             # localization loss
             l_loc = tf.multiply(t, K.square(pred_loc - true_loc))
