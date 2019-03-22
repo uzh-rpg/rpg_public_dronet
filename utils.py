@@ -102,9 +102,8 @@ class DroneDirectoryIterator(Iterator):
         rot_annotations = []
         with open(annotations_path, 'r') as annotations_file:
             annotations_file.readline() # Skip the header
-            line = annotations_file.readline()
-            while line:
-                line.split(',')
+            for line in annotations_file:
+                line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
                 loc_annotations.append(line[1:3])
                 rot_annotations.append(line[3])
