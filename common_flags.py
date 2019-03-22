@@ -39,3 +39,5 @@ gflags.DEFINE_string('weights_fname', "model_weights.h5", '(Relative) '
 gflags.DEFINE_string('json_model_fname', "model_struct.json",
                           'Model struct json serialization, filename')
 
+gflags.DEFINE_integer('nb_windows', 25, 'Number of regions to segmentate the'
+                     ' gate location on the image')

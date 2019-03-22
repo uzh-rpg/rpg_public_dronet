@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import json
 
+from math import sqrt
 from keras import backend as K
 from keras.preprocessing.image import Iterator
 from keras.preprocessing.image import ImageDataGenerator
@@ -26,12 +27,12 @@ class DroneDataGenerator(ImageDataGenerator):
     """
     def flow_from_directory(self, directory, target_size=(224,224),
             crop_size=(250,250), color_mode='grayscale', batch_size=32,
-            shuffle=True, seed=None, follow_links=False):
+            shuffle=True, seed=None, follow_links=False, nb_windows=25):
         return DroneDirectoryIterator(
                 directory, self,
                 target_size=target_size, crop_size=crop_size, color_mode=color_mode,
                 batch_size=batch_size, shuffle=shuffle, seed=seed,
-                follow_links=follow_links)
+                follow_links=follow_links, nb_windows=nb_windows)
 
 
 class DroneDirectoryIterator(Iterator):
@@ -57,12 +58,14 @@ class DroneDirectoryIterator(Iterator):
     '''
     def __init__(self, directory, image_data_generator,
             target_size=(224,224), crop_size = (250,250), color_mode='grayscale',
-            batch_size=32, shuffle=True, seed=None, follow_links=False):
+            batch_size=32, shuffle=True, seed=None, follow_links=False,
+                 nb_windows=25):
         self.samples = 0
         self.formats = {'png', 'jpg'}
         self.directory = directory
         self.image_data_generator = image_data_generator
         self.target_size = tuple(target_size)
+        self.nb_windows = nb_windows
         if crop_size:
             self.crop_size = tuple(crop_size)
         else:
@@ -82,19 +85,17 @@ class DroneDirectoryIterator(Iterator):
         self.ground_truth_loc = []
         self.ground_truth_rot = []
 
-        self._parse_training_dir(directory)
+        self._parse_dir(directory)
 
-        print(self.ground_truth_loc)
         # Conversion of list into array
         self.ground_truth_loc = np.array(self.ground_truth_loc, dtype = K.floatx())
-        print(self.ground_truth_loc)
         self.ground_truth_rot = np.array(self.ground_truth_rot, dtype = K.floatx())
 
         assert self.samples > 0, "Empty dataset!"
         super(DroneDirectoryIterator, self).__init__(self.samples,
                 batch_size, shuffle, seed)
 
-    def _parse_training_dir(self, path):
+    def _parse_dir(self, path):
         annotations_path = os.path.join(path, "annotations.csv")
         images_path = os.path.join(path, "images")
         # TODO: Use dict ?
@@ -105,9 +106,9 @@ class DroneDirectoryIterator(Iterator):
             for line in annotations_file:
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
-                loc_annotations.append(line[1:3])
+                loc_annotations.append(self._compute_location_labels(line[1:3],
+                                                                    line[3]))
                 rot_annotations.append(line[3])
-                line = annotations_file.readline()
 
         if len(loc_annotations) == 0 or len(rot_annotations) == 0:
             print("[!] Annotations could not be loaded!")
@@ -123,9 +124,40 @@ class DroneDirectoryIterator(Iterator):
             if is_valid:
                 self.filenames.append(os.path.relpath(
                     os.path.join(images_path, filename), self.directory))
+                # print(loc_annotations[frame_no])
                 self.ground_truth_loc.append(loc_annotations[frame_no])
                 self.ground_truth_rot.append(rot_annotations[frame_no])
                 self.samples += 1
+
+    def _compute_location_labels(self, coordinates, visible):
+        '''
+        Computes the gate location window from the given pixel coordinates, and
+        returns a list of binary labels corresponding to the N + 1 windows (+1
+        because a special window is defined for the case where the gate is not
+        visible).
+        '''
+        sqrt_win = sqrt(self.nb_windows)
+        windows_width = [int(i * self.image_shape[1] / sqrt_win)
+                         for i in range(1, int(sqrt_win) + 1)]
+        windows_height = [int(i * self.image_shape[0] / sqrt_win)
+                         for i in range(1, int(sqrt_win) + 1)]
+        i, j = 0, 0
+        if not visible:
+            return [1 if i == 0 else 0 for i in range(self.nb_windows + 1)]
+
+        for index, window_i in enumerate(windows_width):
+            if int(coordinates[0]) < window_i:
+                i = index + 1 # Start at 1
+                break
+
+        for index, window_h in enumerate(windows_height):
+            if int(coordinates[1]) < window_h:
+                j = index + 1 # Start at 1
+                break
+
+        labels = [0 for i in range(self.nb_windows + 1)]
+        labels[int(i + ((j-1)*sqrt_win))] = 1
+        return labels
 
     def next(self):
         """
@@ -147,7 +179,7 @@ class DroneDirectoryIterator(Iterator):
         # parallel
         batch_x = np.zeros((current_batch_size,) + self.image_shape,
                 dtype=K.floatx())
-        batch_localization = np.zeros((current_batch_size, 2,),
+        batch_localization = np.zeros((current_batch_size, self.nb_windows + 2,),
                 dtype=K.floatx())
         batch_orientation = np.zeros((current_batch_size, 2,),
                 dtype=K.floatx())
@@ -167,7 +199,7 @@ class DroneDirectoryIterator(Iterator):
 
             # Build batch of localization and orientation data
             batch_localization[i, 0] = 1.0 # TODO: Remove that ?
-            batch_localization[i, 1] = self.ground_truth_loc[index_array[i]]
+            batch_localization[i, 1::] = self.ground_truth_loc[index_array[i]]
             batch_orientation[i, 0] = 0.0
             batch_orientation[i, 1] = self.ground_truth_rot[index_array[1]]
 

@@ -135,7 +135,8 @@ def _main():
                                                         target_size=(img_height,
                                                                      img_width),
                                                         crop_size= crop_size,
-                                                        batch_size = FLAGS.batch_size)
+                                                        batch_size = FLAGS.batch_size,
+                                                       nb_windows = FLAGS.nb_windows)
 
     # Generate validation data with real-time augmentation
     val_datagen = utils.DroneDataGenerator()#rescale = 1./255)
@@ -146,7 +147,8 @@ def _main():
                                                         target_size=(img_height,
                                                                      img_width),
                                                         crop_size= crop_size,
-                                                        batch_size = FLAGS.batch_size)
+                                                        batch_size = FLAGS.batch_size,
+                                                       nb_windows = FLAGS.nb_windows)
 
     # Weights to restore
     weights_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
