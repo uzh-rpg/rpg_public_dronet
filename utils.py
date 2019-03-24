@@ -99,22 +99,23 @@ class DroneDirectoryIterator(Iterator):
         annotations_path = os.path.join(path, "annotations.csv")
         images_path = os.path.join(path, "images")
         # TODO: Use dict ?
-        loc_annotations = []
+        loc_annotations = dict()
         rot_annotations = []
         with open(annotations_path, 'r') as annotations_file:
             annotations_file.readline() # Skip the header
             for line in annotations_file:
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
-                loc_annotations.append(self._compute_location_labels(line[1:3],
-                                                                    line[3]))
+                loc_annotations[frame_no] = self._compute_location_labels(line[1:3],
+                                                                    line[3])
                 rot_annotations.append(line[3])
 
         if len(loc_annotations) == 0 or len(rot_annotations) == 0:
             print("[!] Annotations could not be loaded!")
             raise Exception("Annotations not found")
 
-        for frame_no, filename in enumerate(os.listdir(images_path)):
+        for filename in os.listdir(images_path):
+            frame_no = int(line[0].split('.')[0])
             is_valid = False
             for extension in self.formats:
                 if filename.lower().endswith('.' + extension):
