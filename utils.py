@@ -3,7 +3,6 @@ import os
 import numpy as np
 import tensorflow as tf
 import json
-import time
 
 from math import sqrt
 from keras import backend as K
@@ -110,8 +109,6 @@ class DroneDirectoryIterator(Iterator):
                 frame_no = int(line[0].split('.')[0])
                 loc_annotations[frame_no] = self._compute_location_labels(line[1:3],
                                                                     bool(int(line[4])))
-                print("[{}]: {}".format(frame_no, loc_annotations[frame_no]))
-                time.sleep(1)
                 rot_annotations.append(line[3])
 
         if len(loc_annotations) == 0 or len(rot_annotations) == 0:
