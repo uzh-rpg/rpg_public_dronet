@@ -12,11 +12,13 @@ import logz
 import cnn_models
 import utils
 import log_utils
+import keras.backend as K
 from common_flags import FLAGS
 
 
 
-def getModel(img_width, img_height, img_channels, output_dim, weights_path):
+def getModel(img_width, img_height, img_channels, output_dim, weights_path,
+             transfer=False, transfer_from=None, skip_layers=3):
     """
     Initialize model.
 
@@ -31,13 +33,29 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path):
        model: A Model instance.
     """
     model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim)
-
     if weights_path:
         try:
-            model.load_weights(weights_path)
+            if transfer and transfer_from is not None:
+                print("Transfering weights from {} until layer 8...".format(transfer_from))
+                original_model = utils.jsonToModel(transfer_from)
+                weight_value_tuples = []
+                for layer in original_model.layers[0:-skip_layers]: # Skip the last n layers
+                    print("-> Layer {}".format(layer.name))
+                    target_layer = model.get_layer(name=layer.name)
+                    print("--> Target layer: {}".format(target_layer))
+                    if target_layer:
+                        symbolic_weights = target_layer.trainable_weights + target_layer.non_trainable_weights
+                        weight_values = layer.get_weights()
+                        weight_value_tuples += zip(symbolic_weights, weight_values)
+
+                # Apply to the target model
+                K.batch_set_value(weight_value_tuples)
+            else:
+                model.load_weights(weights_path)
             print("Loaded model from {}".format(weights_path))
-        except:
+        except Exception as e:
             print("Impossible to find weight path. Returning untrained model")
+            print(e)
 
     return model
 
@@ -156,6 +174,9 @@ def _main():
 
     # Weights to restore
     weights_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
+    # Model to transfer from
+    model_path = os.path.join(FLAGS.experiment_rootdir,
+                              FLAGS.model_transfer_fname)
     initial_epoch = 0
     if not FLAGS.restore_model:
         # In this case weights will start from random
@@ -166,7 +187,8 @@ def _main():
 
     # Define model
     model = getModel(crop_img_width, crop_img_height, img_channels,
-                        output_dim, weights_path)
+                        output_dim, weights_path, transfer=True,
+                     transfer_from=model_path)
 
     # Serialize model into json
     json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)

@@ -6,7 +6,6 @@ from keras.layers.merge import add
 from keras import regularizers
 
 
-
 def resnet8(img_width, img_height, img_channels, output_dim):
     """
     Define model architecture.
@@ -76,13 +75,13 @@ def resnet8(img_width, img_height, img_channels, output_dim):
     x7 = add([x5, x6])
 
     x = Flatten()(x7)
-    x = Activation('relu')(x)
+    x = Activation('softmax')(x)
     x = Dropout(0.5)(x)
 
+    # TODO: Experiment with hidden layers
     # Gate localization
-    localization = Dense(output_dim, activation='softmax')(x) # No hidden layers ?
+    localization = Dense(output_dim)(x)
 
-    # Define steering-collision model
     model = Model(inputs=[img_input], outputs=[localization])
     print(model.summary())
 

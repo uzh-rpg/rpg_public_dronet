@@ -326,6 +326,7 @@ def hard_mining_mse(k):
         else:
             # Predicted and real localizations
             # pred_loc = tf.squeeze(y_pred, squeeze_dims=-1)
+            # TODO: Make sure this is correct
             true_loc = y_true[:,1]
             pred_loc = y_pred[:,1]
 
