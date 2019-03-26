@@ -82,7 +82,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
 
-    optimizer = optimizers.Adam(decay=1e-5)
+    optimizer = optimizers.Adam(lr=0.01, decay=1e-6, amsgrad=True)
 
     # Configure training process
     model.compile(loss=[utils.hard_mining_mse(model.k_mse, FLAGS.nb_windows)],
