@@ -198,7 +198,7 @@ class DroneDirectoryIterator(Iterator):
             batch_x[i] = x
 
             # Build batch of localization and orientation data
-            batch_localization[i, 0] = 1.0 # TODO: Remove that ?
+            batch_localization[i, 0] = 1.0
             batch_localization[i, 1::] = self.ground_truth_loc[index_array[i]]
             batch_orientation[i, 0] = 0.0
             batch_orientation[i, 1] = self.ground_truth_rot[index_array[1]]
