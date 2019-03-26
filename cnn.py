@@ -35,6 +35,7 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
     model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim)
     if weights_path:
         try:
+            print("Loaded model from {}".format(weights_path))
             if transfer and transfer_from is not None:
                 print("Transfering weights from {} until layer 8...".format(transfer_from))
                 original_model = utils.jsonToModel(transfer_from)
@@ -52,7 +53,6 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
                 K.batch_set_value(weight_value_tuples)
             else:
                 model.load_weights(weights_path)
-            print("Loaded model from {}".format(weights_path))
         except Exception as e:
             print("Impossible to find weight path. Returning untrained model")
             print(e)
@@ -187,7 +187,8 @@ def _main():
 
     # Define model
     model = getModel(crop_img_width, crop_img_height, img_channels,
-                        output_dim, weights_path, transfer=True,
+                        output_dim, weights_path,
+                     transfer=FLAGS.transfer_learning,
                      transfer_from=model_path)
 
     # Serialize model into json

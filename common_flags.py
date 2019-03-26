@@ -36,6 +36,8 @@ gflags.DEFINE_bool('restore_model', False, 'Whether to restore a trained'
                    ' model for training')
 gflags.DEFINE_string('weights_fname', "model_weights.h5", '(Relative) '
                                           'filename of model weights')
+gflags.DEFINE_bool('transfer_learning', False, 'Partially restore a trained'
+                   'model\'s weights')
 gflags.DEFINE_string('model_transfer_fname', "model_struct.json", '(Relative) '
                                           'filename of model structure to transfer from')
 gflags.DEFINE_string('json_model_fname', "model_struct.json",
