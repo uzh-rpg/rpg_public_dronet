@@ -44,8 +44,8 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
                 for layer in original_model.layers[0:-skip_layers]: # Skip the last n layers
                     print("-> Layer {}".format(layer.name))
                     if layer.name in model_layers:
-                        print("--> Target layer: {}".format(target_layer.name))
                         target_layer = model.get_layer(name=layer.name)
+                        print("--> Target layer: {}".format(target_layer.name))
                         symbolic_weights = target_layer.trainable_weights + target_layer.non_trainable_weights
                         weight_values = layer.get_weights()
                         weight_value_tuples += zip(symbolic_weights, weight_values)
@@ -57,7 +57,6 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
             else:
                 model.load_weights(weights_path)
         except Exception as e:
-            print("Impossible to find weight path. Returning untrained model")
             print(e)
 
     return model
@@ -140,12 +139,8 @@ def _main():
     # Output dimension
     output_dim = FLAGS.nb_windows + 1
 
-    # Generate training data with real-time augmentation
-    train_datagen = utils.DroneDataGenerator(rotation_range = 0.2,
-                                             # rescale = 1./255,
-                                             vertical_flip = True,
-                                             width_shift_range = 0.2,
-                                             height_shift_range=0.2)
+    # Generate training data with no real-time augmentation
+    train_datagen = utils.DroneDataGenerator()
 
     if FLAGS.no_crop:
         crop_size = None
@@ -154,8 +149,9 @@ def _main():
     else:
         crop_size = (crop_img_height, crop_img_width)
 
+    # Already shuffled ;)
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
-                                                        shuffle = True,
+                                                        shuffle = False,
                                                         color_mode=FLAGS.img_mode,
                                                         target_size=(img_height,
                                                                      img_width),
@@ -163,11 +159,11 @@ def _main():
                                                         batch_size = FLAGS.batch_size,
                                                        nb_windows = FLAGS.nb_windows)
 
-    # Generate validation data with real-time augmentation
-    val_datagen = utils.DroneDataGenerator()#rescale = 1./255)
+    # Generate validation data with no real-time augmentation
+    val_datagen = utils.DroneDataGenerator()
 
     val_generator = val_datagen.flow_from_directory(FLAGS.val_dir,
-                                                        shuffle = True,
+                                                        shuffle = False,
                                                         color_mode=FLAGS.img_mode,
                                                         target_size=(img_height,
                                                                      img_width),

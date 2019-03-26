@@ -171,8 +171,7 @@ def _main():
     K.set_learning_phase(TEST_PHASE)
 
     # Generate testing data
-    # TODO: Remove rescale if not used before
-    test_datagen = utils.DroneDataGenerator(rescale=1./255)
+    test_datagen = utils.DroneDataGenerator()
     test_generator = test_datagen.flow_from_directory(FLAGS.test_dir,
                           shuffle=False,
                           color_mode=FLAGS.img_mode,
