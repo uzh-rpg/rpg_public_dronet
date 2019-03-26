@@ -82,13 +82,13 @@ class DroneDirectoryIterator(Iterator):
 
         # Idea = associate each filename with a corresponding steering or label
         self.filenames = []
-        self.ground_truth_loc = []
+        self.ground_truth_loc = dict()
         self.ground_truth_rot = []
 
         self._parse_dir(directory)
 
         # Conversion of list into array
-        self.ground_truth_loc = np.array(self.ground_truth_loc, dtype = K.floatx())
+        # self.ground_truth_loc = np.array(self.ground_truth_loc, dtype = K.floatx())
         self.ground_truth_rot = np.array(self.ground_truth_rot, dtype = K.floatx())
 
         assert self.samples > 0, "Empty dataset!"
@@ -98,23 +98,17 @@ class DroneDirectoryIterator(Iterator):
     def _parse_dir(self, path):
         annotations_path = os.path.join(path, "annotations.csv")
         images_path = os.path.join(path, "images")
-        loc_annotations = dict()
-        rot_annotations = dict()
-        print(annotations_path)
+        rot_annotations = []
         with open(annotations_path, 'r') as annotations_file:
             annotations_file.readline() # Skip the header
             for line in annotations_file:
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
-                loc_annotations[frame_no] = self._compute_location_labels(line[1:3],
+                self.ground_truth_loc[frame_no] = self._compute_location_labels(line[1:3],
                                                                     bool(int(line[4])))
-                if 'validation' in annotations_path:
-                    print("[{}]: {}".format(frame_no,
-                                            loc_annotations[frame_no]))
-                # rot_annotations.append(line[3])
-                rot_annotations[frame_no] = 1000
+                rot_annotations.append(line[3])
 
-        if len(loc_annotations) == 0 or len(rot_annotations) == 0:
+        if len(self.ground_truth_loc) == 0 or len(rot_annotations) == 0:
             print("[!] Annotations could not be loaded!")
             raise Exception("Annotations not found")
 
@@ -129,8 +123,6 @@ class DroneDirectoryIterator(Iterator):
             if is_valid:
                 self.filenames.append(os.path.relpath(
                     os.path.join(images_path, filename), self.directory))
-                self.ground_truth_loc.append(loc_annotations[frame_no])
-                self.ground_truth_rot.append(rot_annotations[frame_no])
                 self.samples += 1
 
     # TODO: What if we crop ?! The labels will be wrong :'(
@@ -205,10 +197,11 @@ class DroneDirectoryIterator(Iterator):
             batch_x[i] = x
 
             # Build batch of localization and orientation data
+            frame_no = int(fname.split('/')[1].split('.')[0])
             batch_localization[i, 0] = 1.0
-            batch_localization[i, 1::] = self.ground_truth_loc[index_array[i]]
+            batch_localization[i, 1::] = self.ground_truth_loc[frame_no]
             batch_orientation[i, 0] = 0.0
-            batch_orientation[i, 1] = self.ground_truth_rot[index_array[1]]
+            # batch_orientation[i, 1] = self.ground_truth_rot[fname]
 
         batch_y = [batch_localization] # TODO: add batch_orientation
         return batch_x, batch_y
@@ -309,7 +302,7 @@ def compute_predictions_and_gt(model, generator, steps,
 
 
 
-def hard_mining_mse(k):
+def hard_mining_mse(k, nb_windows):
     """
     Compute MSE for gate localization evaluation and hard-mining for the current batch.
 
@@ -332,21 +325,17 @@ def hard_mining_mse(k):
             return 0.0
         else:
             # Predicted and real localizations
-            # pred_loc = tf.squeeze(y_pred, squeeze_dims=-1)
-            # TODO: Make sure this is correct
-            # true_loc = y_true[:,1]
-            # pred_loc = y_pred[:,1]
-            true_loc = K.print_tensor(y_true[:,1], message='y_true = ')
-            test=K.print_tensor(y_true[:,0], message='y_true_full = ')
-            pred_loc = K.print_tensor(y_pred[:,1], message='y_pred = ')
+            true_loc = y_true[:, 1::]
+            pred_loc = y_pred
 
-            # localization loss
-            l_loc = tf.multiply(t, K.square(true_loc - pred_loc))
+            # localization loss: DIRTY FIX (FIXME)
+            square =  K.square(true_loc - pred_loc)
+            l_loc = tf.multiply((nb_windows + 1)*[1.0], square)
 
-            # Hard mining
-            k_min = tf.minimum(k, n_samples_loc)
-            _, indices = tf.nn.top_k(l_loc, k=k_min)
-            max_l_loc = tf.gather(l_loc, indices)
+            # Hard mining: use the K biggest losses
+            k_min = tf.minimum(k, n_samples_loc) # Returns the minimum between k and n_samples_loc
+            _, indices = tf.nn.top_k(tf.transpose(l_loc), k=k_min) # Find the k_min largest entries
+            max_l_loc = tf.gather(l_loc, indices) # Match the indices with their values
             hard_l_loc = tf.divide(tf.reduce_sum(max_l_loc), tf.cast(k,tf.float32))
 
             return hard_l_loc
@@ -366,9 +355,7 @@ def hard_mining_entropy(k):
         custom_bin_crossentropy: average binary cross-entropy for the current batch.
     """
 
-    print("HARD MINING ENTROPY")
     def custom_bin_crossentropy(y_true, y_pred):
-        print("AAAAAAAAAAAAAAAAAH")
         # Parameter t indicates the type of experiment
         t = y_true[:,0]
 

@@ -85,7 +85,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     optimizer = optimizers.Adam(decay=1e-5)
 
     # Configure training process
-    model.compile(loss=[utils.hard_mining_mse(model.k_mse)],
+    model.compile(loss=[utils.hard_mining_mse(model.k_mse, FLAGS.nb_windows)],
                         # utils.hard_mining_entropy(model.k_entropy)],
                         optimizer=optimizer, loss_weights=[model.alpha])
 
