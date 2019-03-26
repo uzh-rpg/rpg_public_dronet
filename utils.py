@@ -3,6 +3,7 @@ import os
 import numpy as np
 import tensorflow as tf
 import json
+import time
 
 from math import sqrt
 from keras import backend as K
@@ -101,13 +102,16 @@ class DroneDirectoryIterator(Iterator):
         # TODO: Use dict ?
         loc_annotations = dict()
         rot_annotations = []
+        print(annotations_path)
         with open(annotations_path, 'r') as annotations_file:
             annotations_file.readline() # Skip the header
             for line in annotations_file:
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
                 loc_annotations[frame_no] = self._compute_location_labels(line[1:3],
-                                                                    line[3])
+                                                                    bool(int(line[4])))
+                print("[{}]: {}".format(frame_no, loc_annotations[frame_no]))
+                time.sleep(1)
                 rot_annotations.append(line[3])
 
         if len(loc_annotations) == 0 or len(rot_annotations) == 0:
@@ -129,6 +133,7 @@ class DroneDirectoryIterator(Iterator):
                 self.ground_truth_rot.append(rot_annotations[frame_no])
                 self.samples += 1
 
+    # TODO: What if we crop ?! The labels will be wrong :'(
     def _compute_location_labels(self, coordinates, visible):
         '''
         Computes the gate location window from the given pixel coordinates, and
@@ -143,7 +148,9 @@ class DroneDirectoryIterator(Iterator):
                          for i in range(1, int(sqrt_win) + 1)]
         i, j = 0, 0
         if not visible:
-            return [1 if i == 0 else 0 for i in range(self.nb_windows + 1)]
+            labels = [-1 for i in range(self.nb_windows + 1)]
+            labels[0] = 1
+            return labels
 
         for index, window_i in enumerate(windows_width):
             if int(coordinates[0]) < window_i:
