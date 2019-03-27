@@ -140,7 +140,7 @@ class DroneDirectoryIterator(Iterator):
                          for i in range(1, int(sqrt_win) + 1)]
         i, j = 0, 0
         if not visible:
-            labels = [-1 for i in range(self.nb_windows + 1)]
+            labels = [0 for i in range(self.nb_windows + 1)]
             labels[0] = 1
             return labels
 
@@ -154,7 +154,7 @@ class DroneDirectoryIterator(Iterator):
                 j = index + 1 # Start at 1
                 break
 
-        labels = [-1 for i in range(self.nb_windows + 1)]
+        labels = [0 for i in range(self.nb_windows + 1)]
         labels[int(i + ((j-1)*sqrt_win))] = 1
         return labels
 
@@ -178,7 +178,7 @@ class DroneDirectoryIterator(Iterator):
         # parallel
         batch_x = np.zeros((current_batch_size,) + self.image_shape,
                 dtype=K.floatx())
-        batch_localization = np.zeros((current_batch_size, self.nb_windows + 2,),
+        batch_localization = np.zeros((current_batch_size, self.nb_windows + 1,),
                 dtype=K.floatx())
         batch_orientation = np.zeros((current_batch_size, 2,),
                 dtype=K.floatx())
@@ -198,8 +198,8 @@ class DroneDirectoryIterator(Iterator):
 
             # Build batch of localization and orientation data
             frame_no = int(fname.split('/')[1].split('.')[0])
-            batch_localization[i, 0] = 1.0
-            batch_localization[i, 1::] = self.ground_truth_loc[frame_no]
+            # batch_localization[i, 0] = 1.0
+            batch_localization[i, :] = self.ground_truth_loc[frame_no]
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
 
@@ -300,53 +300,9 @@ def compute_predictions_and_gt(model, generator, steps,
                           np.array([np.concatenate(lab) for lab in all_labels]).T, \
                           np.concatenate(all_ts[0])
 
-
-
-def hard_mining_mse(k, nb_windows):
+def hard_mining_entropy(k, nb_windows):
     """
-    Compute MSE for gate localization evaluation and hard-mining for the current batch.
-
-    # Arguments
-        k: number of samples for hard-mining.
-
-    # Returns
-        custom_mse: average MSE for the current batch.
-    """
-
-    def custom_mse(y_true, y_pred):
-        # Parameter t indicates the type of experiment
-        t = y_true[:,0]
-
-        # Number of gate localization samples
-        samples_loc = tf.cast(tf.equal(t,1), tf.int32)
-        n_samples_loc = tf.reduce_sum(samples_loc)
-
-        if n_samples_loc == 0:
-            return 0.0
-        else:
-            # Predicted and real localizations
-            true_loc = y_true[:, 1::]
-            pred_loc = y_pred
-
-            # localization loss: DIRTY FIX (FIXME)
-            square =  K.square(true_loc - pred_loc)
-            l_loc = tf.multiply((nb_windows + 1)*[1.0], square)
-
-            # Hard mining: use the K biggest losses
-            k_min = tf.minimum(k, n_samples_loc) # Returns the minimum between k and n_samples_loc
-            _, indices = tf.nn.top_k(tf.transpose(l_loc), k=k_min) # Find the k_min largest entries
-            max_l_loc = tf.gather(l_loc, indices) # Match the indices with their values
-            hard_l_loc = tf.divide(tf.reduce_sum(max_l_loc), tf.cast(k,tf.float32))
-
-            return hard_l_loc
-
-    return custom_mse
-
-
-
-def hard_mining_entropy(k):
-    """
-    Compute binary cross-entropy for gate detection evaluation and hard-mining.
+    Compute binary cross-entropy gate localization evaluation and hard-mining for the current batch.
 
     # Arguments
         k: Number of samples for hard-mining.
@@ -357,32 +313,31 @@ def hard_mining_entropy(k):
 
     def custom_bin_crossentropy(y_true, y_pred):
         # Parameter t indicates the type of experiment
-        t = y_true[:,0]
+        # t = y_true[:,0]
 
-        # Number of gate detection samples
-        samples_detec = tf.cast(tf.equal(t,0), tf.int32)
-        n_samples_detec = tf.reduce_sum(samples_detec)
+        # Number of gate loction samples
+        # samples_loc = tf.cast(tf.equal(t,0), tf.int32)
+        n_samples_loc = tf.reduce_sum(tf.cast(y_true, tf.int32))
 
-        if n_samples_detec == 0:
+        if n_samples_loc == 0:
             return 0.0
         else:
             # Predicted and real labels
-            pred_detec = tf.squeeze(y_pred, squeeze_dims=-1)
-            true_detec = y_true[:,1]
+            pred_loc = y_pred
+            true_loc = y_true
 
-            # gate detection loss
-            l_detec = tf.multiply((1-t), K.binary_crossentropy(true_detec, pred_detec))
+            # gate loction loss
+            l_loc = K.binary_crossentropy(true_loc, pred_loc)
+            # Hard mining: use the K biggest losses
+            k_min = tf.minimum(k, n_samples_loc) # Returns the minimum between k and n_samples_loc
+            l_loc_sum = tf.reduce_sum(l_loc, 1)
+            _, indices = tf.nn.top_k(l_loc_sum, k=k_min) # Find the k_min largest entries
+            max_l_loc = tf.gather(l_loc, indices) # Match the indices with their values
+            hard_l_loc = tf.divide(tf.reduce_sum(max_l_loc, 1), tf.cast(nb_windows, tf.float32))
 
-            # Hard mining
-            k_min = tf.minimum(k, n_samples_detec)
-            _, indices = tf.nn.top_k(l_detec, k=k_min)
-            max_l_detec = tf.gather(l_detec, indices)
-            hard_l_detec = tf.divide(tf.reduce_sum(max_l_detec), tf.cast(k, tf.float32))
-
-            return hard_l_detec
+            return hard_l_loc
 
     return custom_bin_crossentropy
-
 
 
 def modelToJson(model, json_model_path):

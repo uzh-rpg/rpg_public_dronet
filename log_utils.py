@@ -48,8 +48,8 @@ class MyCallback(keras.callbacks.Callback):
 
         # Hard mining
         sess = K.get_session()
-        mse_function = self.batch_size-(self.batch_size-10)*(np.maximum(0.0,1.0-np.exp(-1.0/30.0*(epoch-30.0))))
-        # entropy_function = self.batch_size-(self.batch_size-5)*(np.maximum(0.0,1.0-np.exp(-1.0/30.0*(epoch-30.0))))
-        self.model.k_mse.load(int(np.round(mse_function)), sess)
-        # self.model.k_entropy.load(int(np.round(entropy_function)), sess)
+        # mse_function = self.batch_size-(self.batch_size-10)*(np.maximum(0.0,1.0-np.exp(-1.0/30.0*(epoch-30.0))))
+        entropy_function = self.batch_size-(self.batch_size-10)*(np.maximum(0.0,1.0-np.exp(-1.0/30.0*(epoch-30.0))))
+        # self.model.k_mse.load(int(np.round(mse_function)), sess)
+        self.model.k_entropy.load(int(np.round(entropy_function)), sess)
 
