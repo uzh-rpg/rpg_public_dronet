@@ -239,9 +239,9 @@ def compute_predictions_and_gt(model, generator, steps,
             data in an invalid format.
     """
     steps_done = 0
-    all_outputs = []
-    all_labels = []
-    all_ts = []
+    all_outputs = None
+    all_labels = None
+    all_ts = [[]]
 
     if verbose == 1:
         progbar = Progbar(target=steps)
@@ -262,44 +262,24 @@ def compute_predictions_and_gt(model, generator, steps,
         else:
             raise ValueError('Output not valid for current evaluation')
 
-        # TODO: Refactor this crap code
         outputs = model.predict_on_batch(x)
-        if not isinstance(outputs, list):
-            outputs = [outputs]
-        if not isinstance(gt_labels, list):
-            gt_labels = [gt_labels]
-
-        if not all_outputs:
-            for output in outputs:
-            # Len of this list is related to the number of
-            # outputs per model(1 in our case)
-                all_outputs.append([])
-
-        if not all_labels:
-            # Len of list related to the number of gt_commands
-            # per model (1 in our case )
-            for label in gt_labels:
-                all_labels.append([])
-                # all_ts.append([])
+        if all_outputs is None:
+            all_outputs = outputs
+        else:
+            all_outputs = np.concatenate((all_outputs, outputs), axis=0)
 
 
-        for i, output in enumerate(outputs):
-            all_outputs[i].append(output)
-
-        for i, label in enumerate(gt_labels):
-            all_labels[i].append(label)
-            # all_ts[i].append(label[:,0])
+        if all_labels is None:
+            all_labels = gt_labels[0]
+        else:
+            all_labels = np.concatenate((all_labels, gt_labels[0]), axis=0)
 
         steps_done += 1
+
         if verbose == 1:
             progbar.update(steps_done)
 
-    if steps_done == 1:
-        return [output for output in all_outputs], [label for label in all_labels], np.concatenate(all_ts[0])
-    else:
-        return np.squeeze(np.array([np.concatenate(output) for output in all_outputs])).T, \
-                          np.array([np.concatenate(label) for label in all_labels]).T, \
-                          np.concatenate(all_ts[0])
+    return all_outputs, all_labels
 
 def hard_mining_entropy(k, nb_windows):
     """
