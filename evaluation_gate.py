@@ -11,7 +11,9 @@ Evaluate the gate detection and localization accuracy
 """
 
 import os
+import sys
 import gflags
+import utils
 import numpy as np
 
 
@@ -33,13 +35,27 @@ def _main():
     # Set testing mode (dropout/batchnormalization)
     K.set_learning_phase(TEST_PHASE)
 
+    # Input image dimensions
+    img_width, img_height = FLAGS.img_width, FLAGS.img_height
+
+    # Cropped image dimensions
+    crop_img_width, crop_img_height = FLAGS.crop_img_width, FLAGS.crop_img_height
+
+
+    if FLAGS.no_crop:
+        crop_size = None
+        crop_img_height = img_height
+        crop_img_width = img_width
+    else:
+        crop_size = (crop_img_height, crop_img_width)
+
     # Generate testing data
     test_datagen = utils.DroneDataGenerator()
     test_generator = test_datagen.flow_from_directory(FLAGS.test_dir,
                           shuffle=False,
                           color_mode=FLAGS.img_mode,
                           target_size=(FLAGS.img_width, FLAGS.img_height),
-                          crop_size=(FLAGS.crop_img_height, FLAGS.crop_img_width),
+                                                      crop_size= crop_size,
                           batch_size = FLAGS.batch_size)
 
     # Load json and create model

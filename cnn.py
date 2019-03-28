@@ -178,10 +178,11 @@ def _main():
     else:
         model_path = None
     initial_epoch = 0
-    if not FLAGS.restore_model:
+
+    if not FLAGS.transfer_learning and not FLAGS.restore_model:
         # In this case weights will start from random
         weights_path = None
-    else:
+    elif FLAGS.restore_model:
         # In this case weigths will start from the specified model
         weights_path = os.path.join(FLAGS.weights_fname)
         initial_epoch = FLAGS.initial_epoch
