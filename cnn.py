@@ -170,17 +170,20 @@ def _main():
                                                         batch_size = FLAGS.batch_size,
                                                        nb_windows = FLAGS.nb_windows)
 
-    # Weights to restore
-    weights_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
-    # Model to transfer from
-    model_path = os.path.join(FLAGS.experiment_rootdir,
-                              FLAGS.model_transfer_fname)
+    if FLAGS.transfer_learning:
+        # Model to transfer from
+        model_path = os.path.join(FLAGS.model_transfer_fpath)
+        # Weights to restore
+        weights_path = os.path.join(FLAGS.weights_fpath)
+    else:
+        model_path = None
     initial_epoch = 0
     if not FLAGS.restore_model:
         # In this case weights will start from random
         weights_path = None
     else:
         # In this case weigths will start from the specified model
+        weights_path = os.path.join(FLAGS.weights_fname)
         initial_epoch = FLAGS.initial_epoch
 
     # Define model

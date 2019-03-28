@@ -239,7 +239,7 @@ def compute_predictions_and_gt(model, generator, steps,
             data in an invalid format.
     """
     steps_done = 0
-    all_outs = []
+    all_outputs = []
     all_labels = []
     all_ts = []
 
@@ -251,9 +251,9 @@ def compute_predictions_and_gt(model, generator, steps,
 
         if isinstance(generator_output, tuple):
             if len(generator_output) == 2:
-                x, gt_lab = generator_output
+                x, gt_labels = generator_output
             elif len(generator_output) == 3:
-                x, gt_lab, _ = generator_output
+                x, gt_labels, _ = generator_output
             else:
                 raise ValueError('output of generator should be '
                                  'a tuple `(x, y, sample_weight)` '
@@ -262,42 +262,43 @@ def compute_predictions_and_gt(model, generator, steps,
         else:
             raise ValueError('Output not valid for current evaluation')
 
-        outs = model.predict_on_batch(x)
-        if not isinstance(outs, list):
-            outs = [outs]
-        if not isinstance(gt_lab, list):
-            gt_lab = [gt_lab]
+        # TODO: Refactor this crap code
+        outputs = model.predict_on_batch(x)
+        if not isinstance(outputs, list):
+            outputs = [outputs]
+        if not isinstance(gt_labels, list):
+            gt_labels = [gt_labels]
 
-        if not all_outs:
-            for out in outs:
+        if not all_outputs:
+            for output in outputs:
             # Len of this list is related to the number of
             # outputs per model(1 in our case)
-                all_outs.append([])
+                all_outputs.append([])
 
         if not all_labels:
             # Len of list related to the number of gt_commands
             # per model (1 in our case )
-            for lab in gt_lab:
+            for label in gt_labels:
                 all_labels.append([])
-                all_ts.append([])
+                # all_ts.append([])
 
 
-        for i, out in enumerate(outs):
-            all_outs[i].append(out)
+        for i, output in enumerate(outputs):
+            all_outputs[i].append(output)
 
-        for i, lab in enumerate(gt_lab):
-            all_labels[i].append(lab[:,1])
-            all_ts[i].append(lab[:,0])
+        for i, label in enumerate(gt_labels):
+            all_labels[i].append(label)
+            # all_ts[i].append(label[:,0])
 
         steps_done += 1
         if verbose == 1:
             progbar.update(steps_done)
 
     if steps_done == 1:
-        return [out for out in all_outs], [lab for lab in all_labels], np.concatenate(all_ts[0])
+        return [output for output in all_outputs], [label for label in all_labels], np.concatenate(all_ts[0])
     else:
-        return np.squeeze(np.array([np.concatenate(out) for out in all_outs])).T, \
-                          np.array([np.concatenate(lab) for lab in all_labels]).T, \
+        return np.squeeze(np.array([np.concatenate(output) for output in all_outputs])).T, \
+                          np.array([np.concatenate(label) for label in all_labels]).T, \
                           np.concatenate(all_ts[0])
 
 def hard_mining_entropy(k, nb_windows):
