@@ -5,6 +5,7 @@ import sys
 import gflags
 
 from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.metrics import categorical_accuracy
 from keras import optimizers
 from time import time
 
@@ -85,8 +86,8 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     optimizer = optimizers.Adam(decay=1e-8)
 
     # Configure training process
-    model.compile(loss='categorical_crossentropy',
-                        optimizer=optimizer, loss_weights=[model.alpha])
+    model.compile(loss='categorical_crossentropy', optimizer=optimizer,
+                  loss_weights=[model.alpha], metrics=[categorical_accuracy])
 
     # Save model with the lowest validation loss
     weights_path = os.path.join(FLAGS.experiment_rootdir, 'weights_{epoch:03d}.h5')

@@ -133,6 +133,8 @@ class DroneDirectoryIterator(Iterator):
         because a special window is defined for the case where the gate is not
         visible).
         '''
+        # TODO: Use keras.utils.to_categorical(y, num_classes=None, dtype='float32')
+        # which does this automatically!
         sqrt_win = sqrt(self.nb_windows)
         windows_width = [int(i * self.image_shape[1] / sqrt_win)
                          for i in range(1, int(sqrt_win) + 1)]
