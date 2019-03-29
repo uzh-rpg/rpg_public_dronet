@@ -85,7 +85,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     optimizer = optimizers.Adam(decay=1e-8)
 
     # Configure training process
-    model.compile(loss=[utils.hard_mining_entropy(model.k_entropy, FLAGS.nb_windows)],
+    model.compile(loss='categorical_crossentropy',
                         optimizer=optimizer, loss_weights=[model.alpha])
 
     # Save model with the lowest validation loss

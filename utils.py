@@ -321,6 +321,40 @@ def hard_mining_entropy(k, nb_windows):
     return custom_bin_crossentropy
 
 
+def hard_mining_categorical_crossentropy(k, nb_windows):
+
+    def custom_categorical_crossentropy(y_true, y_pred):
+        # Parameter t indicates the type of experiment
+        # t = y_true[:,0]
+
+        # Number of gate loction samples
+        # samples_loc = tf.cast(tf.equal(t,0), tf.int32)
+        n_samples_loc = tf.reduce_sum(tf.cast(y_true, tf.int32))
+
+        if n_samples_loc == 0:
+            return 0.0
+        else:
+            # Predicted and real labels
+            pred_loc = y_pred
+            true_loc = y_true
+
+            # gate loction loss
+            l_loc = K.categorical_crossentropy(true_loc, pred_loc)
+            l_loc = tf.Print(l_loc, data=[l_loc], message='l_loc=',
+                             summarize=100)
+            # Hard mining: use the K biggest losses
+            k_min = tf.minimum(k, n_samples_loc) # Returns the minimum between k and n_samples_loc
+            l_loc_sum = tf.reduce_sum(l_loc, 1)
+            _, indices = tf.nn.top_k(l_loc_sum, k=k_min) # Find the k_min largest entries
+            max_l_loc = tf.gather(l_loc, indices) # Match the indices with their values
+            hard_l_loc = tf.divide(tf.reduce_sum(max_l_loc, 1), tf.cast(nb_windows, tf.float32))
+
+            return hard_l_loc
+
+    return custom_categorical_crossentropy
+
+
+
 def modelToJson(model, json_model_path):
     """
     Serialize model into json.
