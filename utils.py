@@ -40,8 +40,17 @@ class DroneDirectoryIterator(Iterator):
     Class for managing data loading of images and labels.
     The assumed folder structure is:
         root_folder/
-            images/
-            annotations.csv
+            dataset_1/
+                images/
+                    img_01.png
+                    ...
+                annotations.csv
+            dataset_2/
+                images/
+                    img_01.png
+                    ...
+                annotations.csv
+            ...
 
     # Arguments
        directory: Path to the root directory to read data from.
@@ -85,7 +94,7 @@ class DroneDirectoryIterator(Iterator):
         self.ground_truth_loc = dict()
         self.ground_truth_rot = []
 
-        self._parse_dir(directory)
+        self._walk_dir(directory, [])
 
         # Conversion of list into array
         # self.ground_truth_loc = np.array(self.ground_truth_loc, dtype = K.floatx())
@@ -95,7 +104,16 @@ class DroneDirectoryIterator(Iterator):
         super(DroneDirectoryIterator, self).__init__(self.samples,
                 batch_size, shuffle, seed)
 
-    def _parse_dir(self, path):
+    def _walk_dir(self, path, sub_dirs=[]):
+        for root, dirs, files in os.walk(path):
+            if "annotations.csv" not in files:
+                for sub_dir in dirs:
+                    self._walk_dir(sub_dir, sub_dirs.append(sub_dir))
+            else:
+                self._parse_dir(root, sub_dirs)
+
+    def _parse_dir(self, path, sub_dirs):
+        sub_dirs = ''.join(sub_dirs)
         annotations_path = os.path.join(path, "annotations.csv")
         images_path = os.path.join(path, "images")
         rot_annotations = []
@@ -104,8 +122,9 @@ class DroneDirectoryIterator(Iterator):
             for line in annotations_file:
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
-                self.ground_truth_loc[frame_no] = self._compute_location_labels(line[1:3],
-                                                                    bool(int(line[4])))
+                key = "{}_{}".format(sub_dirs, frame_no)
+                self.ground_truth_loc[key] =\
+                    self._compute_location_labels(line[1:3], bool(int(line[4])))
                 rot_annotations.append(line[3])
 
         if len(self.ground_truth_loc) == 0 or len(rot_annotations) == 0:
@@ -121,8 +140,9 @@ class DroneDirectoryIterator(Iterator):
                     break
 
             if is_valid:
-                self.filenames.append(os.path.relpath(
-                    os.path.join(images_path, filename), self.directory))
+                self.filenames.append(os.path.relpath(os.path.join(images_path,
+                                                                   filename),
+                                                      self.directory))
                 self.samples += 1
 
     # TODO: What if we crop ?! The labels will be wrong :'(
@@ -189,7 +209,8 @@ class DroneDirectoryIterator(Iterator):
         # Build batch of image data
         for i, j in enumerate(index_array):
             fname = self.filenames[j]
-            x = img_utils.load_img(os.path.join(self.directory, fname),
+            x = img_utils.load_img(
+                    os.path.join(self.directory, fname),
                     grayscale=grayscale,
                     crop_size=self.crop_size,
                     target_size=self.target_size)
@@ -199,9 +220,13 @@ class DroneDirectoryIterator(Iterator):
             batch_x[i] = x
 
             # Build batch of localization and orientation data
-            frame_no = int(fname.split('/')[1].split('.')[0])
+            # Get rid of the filename and images/ folder
+            sub_dirs_str = os.path.split(os.path.split(fname)[0])[0]
+            sub_dirs_str = sub_dirs_str.replace('/', '')
+            frame_no = int(os.path.split(fname)[-1].split('.')[0])
+            key = "{}_{}".format(sub_dirs_str, frame_no)
             # batch_localization[i, 0] = 1.0
-            batch_localization[i, :] = self.ground_truth_loc[frame_no]
+            batch_localization[i, :] = self.ground_truth_loc[key]
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
 
