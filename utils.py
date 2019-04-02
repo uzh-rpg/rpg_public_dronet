@@ -134,8 +134,9 @@ class DroneDirectoryIterator(Iterator):
             print("[!] Annotations could not be loaded!")
             raise Exception("Annotations not found")
 
+        n = 0
         for filename in os.listdir(images_path):
-            if self.samples == self.max_samples:
+            if n == self.max_samples:
                 break
             is_valid = False
             for extension in self.formats:
@@ -148,6 +149,7 @@ class DroneDirectoryIterator(Iterator):
                                                                    filename),
                                                       self.directory))
                 self.samples += 1
+                n += 1
 
     # TODO: What if we crop ?! The labels will be wrong :'(
     def _compute_location_labels(self, coordinates, visible):
