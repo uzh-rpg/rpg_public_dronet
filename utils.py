@@ -26,11 +26,11 @@ class DroneDataGenerator(ImageDataGenerator):
 
     For an example usage, see the evaluate.py script
     """
-    def flow_from_directory(self, directory, target_size=(224,224),
+    def flow_from_directory(self, directory, max_samples, target_size=(224,224),
             crop_size=(250,250), color_mode='grayscale', batch_size=32,
             shuffle=True, seed=None, follow_links=False, nb_windows=25):
         return DroneDirectoryIterator(
-                directory, self,
+                directory, max_samples, self,
                 target_size=target_size, crop_size=crop_size, color_mode=color_mode,
                 batch_size=batch_size, shuffle=shuffle, seed=seed,
                 follow_links=follow_links, nb_windows=nb_windows)
@@ -66,7 +66,7 @@ class DroneDirectoryIterator(Iterator):
 
     # TODO: Add functionality to save images to have a look at the augmentation
     '''
-    def __init__(self, directory, image_data_generator,
+    def __init__(self, directory, max_samples, image_data_generator,
             target_size=(224,224), crop_size = (250,250), color_mode='grayscale',
             batch_size=32, shuffle=True, seed=None, follow_links=False,
                  nb_windows=25):
@@ -117,9 +117,12 @@ class DroneDirectoryIterator(Iterator):
         annotations_path = os.path.join(path, "annotations.csv")
         images_path = os.path.join(path, "images")
         rot_annotations = []
+        n = 0
         with open(annotations_path, 'r') as annotations_file:
             annotations_file.readline() # Skip the header
             for line in annotations_file:
+                if n == self.max_samples:
+                    break
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
                 key = "{}_{}".format(sub_dirs, frame_no)
@@ -128,12 +131,16 @@ class DroneDirectoryIterator(Iterator):
                     # self._compute_location_label(line[1:3], bool(int(line[4])))
                 self.gt_coord[key] = "{}x{}".format(line[1], line[2])
                 rot_annotations.append(line[3])
+                n += 1
 
         if len(self.ground_truth_loc) == 0 or len(rot_annotations) == 0:
             print("[!] Annotations could not be loaded!")
             raise Exception("Annotations not found")
 
+        n = 0
         for filename in os.listdir(images_path):
+            if n == self.max_samples:
+                break
             frame_no = int(line[0].split('.')[0])
             is_valid = False
             for extension in self.formats:
@@ -146,6 +153,7 @@ class DroneDirectoryIterator(Iterator):
                                                                    filename),
                                                       self.directory))
                 self.samples += 1
+                n += 1
 
     # TODO: What if we crop ?! The labels will be wrong :'(
     def _compute_location_labels(self, coordinates, visible):

@@ -151,6 +151,7 @@ def _main():
 
     # Already shuffled ;)
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
+                                                        FLAGS.max_samples_per_dataset,
                                                         shuffle = False,
                                                         color_mode=FLAGS.img_mode,
                                                         target_size=(img_height,
@@ -163,13 +164,14 @@ def _main():
     val_datagen = utils.DroneDataGenerator()
 
     val_generator = val_datagen.flow_from_directory(FLAGS.val_dir,
-                                                        shuffle = False,
-                                                        color_mode=FLAGS.img_mode,
-                                                        target_size=(img_height,
-                                                                     img_width),
-                                                        crop_size= crop_size,
-                                                        batch_size = FLAGS.batch_size,
-                                                       nb_windows = FLAGS.nb_windows)
+                                                    FLAGS.max_samples_per_dataset,
+                                                    shuffle = False,
+                                                    color_mode=FLAGS.img_mode,
+                                                    target_size=(img_height,
+                                                                 img_width),
+                                                    crop_size= crop_size,
+                                                    batch_size = FLAGS.batch_size,
+                                                   nb_windows = FLAGS.nb_windows)
 
     if FLAGS.transfer_learning:
         # Model to transfer from
