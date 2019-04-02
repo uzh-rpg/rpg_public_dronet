@@ -71,6 +71,7 @@ class DroneDirectoryIterator(Iterator):
             batch_size=32, shuffle=True, seed=None, follow_links=False,
                  nb_windows=25):
         self.samples = 0
+        self.max_samples = max_samples
         self.formats = {'png', 'jpg'}
         self.directory = directory
         self.image_data_generator = image_data_generator
@@ -117,12 +118,9 @@ class DroneDirectoryIterator(Iterator):
         annotations_path = os.path.join(path, "annotations.csv")
         images_path = os.path.join(path, "images")
         rot_annotations = []
-        n = 0
         with open(annotations_path, 'r') as annotations_file:
             annotations_file.readline() # Skip the header
             for line in annotations_file:
-                if n == self.max_samples:
-                    break
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
                 key = "{}_{}".format(sub_dirs, frame_no)
@@ -131,7 +129,6 @@ class DroneDirectoryIterator(Iterator):
                     # self._compute_location_label(line[1:3], bool(int(line[4])))
                 self.gt_coord[key] = "{}x{}".format(line[1], line[2])
                 rot_annotations.append(line[3])
-                n += 1
 
         if len(self.ground_truth_loc) == 0 or len(rot_annotations) == 0:
             print("[!] Annotations could not be loaded!")
@@ -141,7 +138,6 @@ class DroneDirectoryIterator(Iterator):
         for filename in os.listdir(images_path):
             if n == self.max_samples:
                 break
-            frame_no = int(line[0].split('.')[0])
             is_valid = False
             for extension in self.formats:
                 if filename.lower().endswith('.' + extension):
@@ -153,7 +149,6 @@ class DroneDirectoryIterator(Iterator):
                                                                    filename),
                                                       self.directory))
                 self.samples += 1
-                n += 1
 
     # TODO: What if we crop ?! The labels will be wrong :'(
     def _compute_location_labels(self, coordinates, visible):
