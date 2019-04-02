@@ -134,9 +134,8 @@ class DroneDirectoryIterator(Iterator):
             print("[!] Annotations could not be loaded!")
             raise Exception("Annotations not found")
 
-        n = 0
         for filename in os.listdir(images_path):
-            if n == self.max_samples:
+            if self.samples == self.max_samples:
                 break
             is_valid = False
             for extension in self.formats:
