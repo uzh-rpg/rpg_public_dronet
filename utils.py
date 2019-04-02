@@ -5,6 +5,8 @@ import tensorflow as tf
 import json
 
 from math import sqrt
+from PIL import Image
+from time import sleep
 from keras import backend as K
 from keras.preprocessing.image import Iterator
 from keras.preprocessing.image import ImageDataGenerator
@@ -122,7 +124,8 @@ class DroneDirectoryIterator(Iterator):
                 frame_no = int(line[0].split('.')[0])
                 key = "{}_{}".format(sub_dirs, frame_no)
                 self.ground_truth_loc[key] =\
-                    self._compute_location_labels(line[1:3], bool(int(line[4])))
+                    # self._compute_location_labels(line[1:3], bool(int(line[4])))
+                    self._compute_location_label(line[1:3], bool(int(line[4])))
                 rot_annotations.append(line[3])
 
         if len(self.ground_truth_loc) == 0 or len(rot_annotations) == 0:
@@ -178,6 +181,37 @@ class DroneDirectoryIterator(Iterator):
         labels[int(i + ((j-1)*sqrt_win))] = 1
         return labels
 
+    def _compute_location_label(self, coordinates, visible):
+        '''
+        Computes the gate location window from the given pixel coordinates, and
+        returns an integer corresponding to the window/region in the set {0:N + 1 windows (+1
+        because a special window is defined for the case where the gate is not
+        visible)}, which is the input format for Keras'
+        sparse_categorical_crossentropy loss function.
+        '''
+        if not visible:
+            return 0
+
+        sqrt_win = sqrt(self.nb_windows)
+        windows_width = [int(i * self.image_shape[1] / sqrt_win)
+                         for i in range(1, int(sqrt_win) + 1)]
+        windows_height = [int(i * self.image_shape[0] / sqrt_win)
+                         for i in range(1, int(sqrt_win) + 1)]
+        i, j = 0, 0
+
+        for index, window_i in enumerate(windows_width):
+            if int(coordinates[0]) < window_i:
+                i = index + 1 # Start at 1
+                break
+
+        for index, window_h in enumerate(windows_height):
+            if int(coordinates[1]) < window_h:
+                j = index + 1 # Start at 1
+                break
+
+        return int(i + ((j-1)*sqrt_win))
+
+
     def next(self):
         """
         Public function to fetch next batch.
@@ -213,8 +247,8 @@ class DroneDirectoryIterator(Iterator):
                     crop_size=self.crop_size,
                     target_size=self.target_size)
 
-            x = self.image_data_generator.random_transform(x)
-            x = self.image_data_generator.standardize(x)
+            # x = self.image_data_generator.random_transform(x)
+            # x = self.image_data_generator.standardize(x)
             batch_x[i] = x
 
             # Build batch of localization and orientation data
@@ -224,6 +258,9 @@ class DroneDirectoryIterator(Iterator):
             frame_no = int(os.path.split(fname)[-1].split('.')[0])
             key = "{}_{}".format(sub_dirs_str, frame_no)
             # batch_localization[i, 0] = 1.0
+            Image.fromarray(x).show()
+            print("Ground truth: {}".format(self.ground_truth_loc[key]))
+            sleep(3)
             batch_localization[i, :] = self.ground_truth_loc[key]
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
