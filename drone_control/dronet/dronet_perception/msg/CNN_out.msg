@@ -1,3 +1,0 @@
-Header header
-float32 steering_angle
-float32 collision_prob
