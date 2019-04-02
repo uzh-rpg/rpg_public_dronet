@@ -83,7 +83,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
 
-    optimizer = optimizers.Adam(decay=1e-8)
+    optimizer = optimizers.Adam(lr=0.003, decay=1e-8)
 
     # Configure training process
     model.compile(loss='categorical_crossentropy', optimizer=optimizer,

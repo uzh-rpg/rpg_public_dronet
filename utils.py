@@ -94,7 +94,7 @@ class DroneDirectoryIterator(Iterator):
         self.ground_truth_loc = dict()
         self.ground_truth_rot = []
 
-        self._walk_dir(directory, [])
+        self._walk_dir(directory)
 
         # Conversion of list into array
         # self.ground_truth_loc = np.array(self.ground_truth_loc, dtype = K.floatx())
@@ -104,16 +104,14 @@ class DroneDirectoryIterator(Iterator):
         super(DroneDirectoryIterator, self).__init__(self.samples,
                 batch_size, shuffle, seed)
 
-    def _walk_dir(self, path, sub_dirs=[]):
+    def _walk_dir(self, path):
         for root, dirs, files in os.walk(path):
-            if "annotations.csv" not in files:
-                for sub_dir in dirs:
-                    self._walk_dir(sub_dir, sub_dirs.append(sub_dir))
-            else:
+            if "annotations.csv" in files:
+                sub_dirs = os.path.relpath(root, path).split('/')
+                sub_dirs = ''.join(sub_dirs)
                 self._parse_dir(root, sub_dirs)
 
     def _parse_dir(self, path, sub_dirs):
-        sub_dirs = ''.join(sub_dirs)
         annotations_path = os.path.join(path, "annotations.csv")
         images_path = os.path.join(path, "images")
         rot_annotations = []

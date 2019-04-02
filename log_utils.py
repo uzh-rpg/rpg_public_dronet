@@ -38,8 +38,9 @@ class MyCallback(keras.callbacks.Callback):
         # Save training and validation losses
         logz.log_tabular('train_loss', logs.get('loss'))
         logz.log_tabular('val_loss', logs.get('val_loss'))
-        logz.log_tabular('train_accuracy', logs.get('acc'))
-        logz.log_tabular('val_accuracy', logs.get('val_acc'))
+        print(logs.keys())
+        logz.log_tabular('train_accuracy', logs.get('categorical_accuracy'))
+        logz.log_tabular('val_accuracy', logs.get('val_categorical_accuracy'))
         logz.dump_tabular()
 
         # Save model every 'period' epochs
