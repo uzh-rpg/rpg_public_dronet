@@ -5,7 +5,6 @@ import tensorflow as tf
 import json
 
 from math import sqrt
-from PIL import Image
 from time import sleep
 from keras import backend as K
 from keras.preprocessing.image import Iterator
@@ -94,6 +93,7 @@ class DroneDirectoryIterator(Iterator):
         # Idea = associate each filename with a corresponding steering or label
         self.filenames = []
         self.ground_truth_loc = dict()
+        self.gt_coord = dict()
         self.ground_truth_rot = []
 
         self._walk_dir(directory)
@@ -124,8 +124,9 @@ class DroneDirectoryIterator(Iterator):
                 frame_no = int(line[0].split('.')[0])
                 key = "{}_{}".format(sub_dirs, frame_no)
                 self.ground_truth_loc[key] =\
-                    # self._compute_location_labels(line[1:3], bool(int(line[4])))
-                    self._compute_location_label(line[1:3], bool(int(line[4])))
+                    self._compute_location_labels(line[1:3], bool(int(line[4])))
+                    # self._compute_location_label(line[1:3], bool(int(line[4])))
+                self.gt_coord[key] = "{}x{}".format(line[1], line[2])
                 rot_annotations.append(line[3])
 
         if len(self.ground_truth_loc) == 0 or len(rot_annotations) == 0:
@@ -258,9 +259,6 @@ class DroneDirectoryIterator(Iterator):
             frame_no = int(os.path.split(fname)[-1].split('.')[0])
             key = "{}_{}".format(sub_dirs_str, frame_no)
             # batch_localization[i, 0] = 1.0
-            Image.fromarray(x).show()
-            print("Ground truth: {}".format(self.ground_truth_loc[key]))
-            sleep(3)
             batch_localization[i, :] = self.ground_truth_loc[key]
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
@@ -402,16 +400,14 @@ def hard_mining_categorical_crossentropy(k, nb_windows):
 
             # gate loction loss
             l_loc = K.categorical_crossentropy(true_loc, pred_loc)
-            l_loc = tf.Print(l_loc, data=[l_loc], message='l_loc=',
-                             summarize=100)
             # Hard mining: use the K biggest losses
             k_min = tf.minimum(k, n_samples_loc) # Returns the minimum between k and n_samples_loc
-            l_loc_sum = tf.reduce_sum(l_loc, 1)
-            _, indices = tf.nn.top_k(l_loc_sum, k=k_min) # Find the k_min largest entries
+            # l_loc_sum = tf.reduce_sum(l_loc, 1)
+            _, indices = tf.nn.top_k(l_loc, k=k_min) # Find the k_min largest entries
             max_l_loc = tf.gather(l_loc, indices) # Match the indices with their values
-            hard_l_loc = tf.divide(tf.reduce_sum(max_l_loc, 1), tf.cast(nb_windows, tf.float32))
+            # hard_l_loc = tf.divide(tf.reduce_sum(max_l_loc, 1), tf.cast(nb_windows, tf.float32))
 
-            return hard_l_loc
+            return max_l_loc
 
     return custom_categorical_crossentropy
 

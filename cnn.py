@@ -5,7 +5,7 @@ import sys
 import gflags
 
 from keras.callbacks import ModelCheckpoint, TensorBoard
-from keras.metrics import categorical_accuracy
+from keras.metrics import categorical_accuracy, sparse_categorical_accuracy
 from keras import optimizers
 from time import time
 
@@ -15,7 +15,6 @@ import utils
 import log_utils
 import keras.backend as K
 from common_flags import FLAGS
-
 
 
 def getModel(img_width, img_height, img_channels, output_dim, weights_path,
@@ -82,11 +81,12 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-
-    optimizer = optimizers.Adam(lr=0.003, decay=1e-8)
+    optimizer = optimizers.Adam()
 
     # Configure training process
-    model.compile(loss='categorical_crossentropy', optimizer=optimizer,
+    model.compile(loss=utils.hard_mining_categorical_crossentropy(model.k_entropy,
+                                                                  FLAGS.nb_windows),
+                  optimizer=optimizer,
                   loss_weights=[model.alpha], metrics=[categorical_accuracy])
 
     # Save model with the lowest validation loss

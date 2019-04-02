@@ -29,16 +29,12 @@ class MyCallback(keras.callbacks.Callback):
         # self.model.beta.load(np.maximum(0.0, 1.0-np.exp(-1.0/10.0*(epoch-10))), sess)
         self.model.alpha.load(1.0, sess)
 
-        print(self.model.alpha.eval(sess))
-        # print(self.model.beta.eval(sess))
-
 
     def on_epoch_end(self, epoch, logs={}):
 
         # Save training and validation losses
         logz.log_tabular('train_loss', logs.get('loss'))
         logz.log_tabular('val_loss', logs.get('val_loss'))
-        print(logs.keys())
         logz.log_tabular('train_accuracy', logs.get('categorical_accuracy'))
         logz.log_tabular('val_accuracy', logs.get('val_categorical_accuracy'))
         logz.dump_tabular()
