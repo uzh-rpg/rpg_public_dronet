@@ -91,7 +91,6 @@ def _main():
 
     # Load weights
     weights_load_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
-    print(weights_load_path)
     try:
         model.load_weights(weights_load_path)
         print("Loaded model from {}".format(weights_load_path))
