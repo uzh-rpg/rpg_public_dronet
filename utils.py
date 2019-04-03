@@ -246,6 +246,7 @@ class DroneDirectoryIterator(Iterator):
             fname = self.filenames[j]
             x = img_utils.load_img(os.path.join(self.directory, fname),
                                    grayscale=grayscale)
+            x = self.image_data_generator.standardize(x)
             batch_x[i] = x
 
             # Build batch of localization and orientation data

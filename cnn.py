@@ -140,7 +140,7 @@ def _main():
     output_dim = FLAGS.nb_windows + 1
 
     # Generate training data with no real-time augmentation
-    train_datagen = utils.DroneDataGenerator()
+    train_datagen = utils.DroneDataGenerator(zca_whitening=True)
 
     # Already shuffled ;)
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
@@ -153,7 +153,7 @@ def _main():
                                                        nb_windows = FLAGS.nb_windows)
 
        # Generate validation data with no real-time augmentation
-    val_datagen = utils.DroneDataGenerator()
+    val_datagen = utils.DroneDataGenerator(zca_whitening=True)
 
     val_generator = val_datagen.flow_from_directory(FLAGS.val_dir,
                                                     FLAGS.max_v_samples_per_dataset,
