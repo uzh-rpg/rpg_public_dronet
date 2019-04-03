@@ -10,7 +10,7 @@ gflags.DEFINE_integer('img_height', 480, 'Target Image Height')
 
 gflags.DEFINE_integer('crop_img_width', 200, 'Cropped image widht')
 gflags.DEFINE_integer('crop_img_height', 200, 'Cropped image height')
-gflags.DEFINE_bool('no_crop', True, 'Whether to crop the input image')
+gflags.DEFINE_bool('no_crop', False, 'Whether to crop the input image')
 
 gflags.DEFINE_string('img_mode', "grayscale", 'Load mode for images, either '
                      'rgb or grayscale')

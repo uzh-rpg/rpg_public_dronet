@@ -81,13 +81,13 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    optimizer = optimizers.Adam()
+    optimizer = optimizers.Adam(lr=0.003, decay=1e-6)
 
     # Configure training process
-    model.compile(loss=utils.hard_mining_categorical_crossentropy(model.k_entropy,
-                                                                  FLAGS.nb_windows),
+    model.compile(loss=['categorical_crossentropy'],
+                  loss_weights=[model.alpha],
                   optimizer=optimizer,
-                  loss_weights=[model.alpha], metrics=[categorical_accuracy])
+                  metrics=[categorical_accuracy])
 
     # Save model with the lowest validation loss
     weights_path = os.path.join(FLAGS.experiment_rootdir, 'weights_{epoch:03d}.h5')

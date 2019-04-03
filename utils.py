@@ -75,12 +75,12 @@ class DroneDirectoryIterator(Iterator):
         self.formats = {'png', 'jpg'}
         self.directory = directory
         self.image_data_generator = image_data_generator
-        self.target_size = tuple(target_size)
+        # self.target_size = tuple(target_size)
         self.nb_windows = nb_windows
-        if crop_size:
-            self.crop_size = tuple(crop_size)
-        else:
-            self.crop_size = tuple(target_size)
+        # if crop_size:
+            # self.crop_size = tuple(crop_size)
+        # else:
+            # self.crop_size = tuple(target_size)
         self.follow_links = follow_links
         if color_mode not in {'rgb', 'grayscale'}:
             raise ValueError('Invalid color mode:', color_mode,
@@ -249,8 +249,8 @@ class DroneDirectoryIterator(Iterator):
             x = img_utils.load_img(
                     os.path.join(self.directory, fname),
                     grayscale=grayscale,
-                    crop_size=self.crop_size,
-                    target_size=self.target_size)
+                    crop_size=None,
+                    target_size=None)
 
             # x = self.image_data_generator.random_transform(x)
             # x = self.image_data_generator.standardize(x)
@@ -384,6 +384,12 @@ def hard_mining_entropy(k, nb_windows):
 
     return custom_bin_crossentropy
 
+
+def softmax_cross_entropy_loss(k, nb_windows):
+    def simple_cross_entropy_from_logits(y_true, y_pred):
+        return tf.losses.softmax_cross_entropy(y_true, y_pred)
+
+    return simple_cross_entropy_from_logits
 
 def hard_mining_categorical_crossentropy(k, nb_windows):
 
