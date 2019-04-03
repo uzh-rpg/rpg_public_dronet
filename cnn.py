@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import cv2
 import os
 import sys
 import gflags
@@ -41,7 +42,9 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
                 print("Transfering weights from {} until layer 8...".format(transfer_from))
                 original_model = utils.jsonToModel(transfer_from)
                 weight_value_tuples = []
-                for layer in original_model.layers[0:-skip_layers]: # Skip the last n layers
+                start_at = 2 if img_channels == 3 else 0
+                # Skip the last n layers
+                for layer in original_model.layers[start_at:-skip_layers]:
                     print("-> Layer {}".format(layer.name))
                     if layer.name in model_layers:
                         target_layer = model.get_layer(name=layer.name)
@@ -125,9 +128,6 @@ def _main():
     # Input image dimensions
     img_width, img_height = FLAGS.img_width, FLAGS.img_height
 
-    # Cropped image dimensions
-    crop_img_width, crop_img_height = FLAGS.crop_img_width, FLAGS.crop_img_height
-
     # Image mode
     if FLAGS.img_mode=='rgb':
         img_channels = 3
@@ -142,34 +142,25 @@ def _main():
     # Generate training data with no real-time augmentation
     train_datagen = utils.DroneDataGenerator()
 
-    if FLAGS.no_crop:
-        crop_size = None
-        crop_img_height = img_height
-        crop_img_width = img_width
-    else:
-        crop_size = (crop_img_height, crop_img_width)
-
     # Already shuffled ;)
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
                                                         FLAGS.max_t_samples_per_dataset,
                                                         shuffle = False,
                                                         color_mode=FLAGS.img_mode,
-                                                        target_size=(img_height,
-                                                                     img_width),
-                                                        crop_size= crop_size,
+                                                        target_size=(img_width,
+                                                                     img_height),
                                                         batch_size = FLAGS.batch_size,
                                                        nb_windows = FLAGS.nb_windows)
 
-    # Generate validation data with no real-time augmentation
+       # Generate validation data with no real-time augmentation
     val_datagen = utils.DroneDataGenerator()
 
     val_generator = val_datagen.flow_from_directory(FLAGS.val_dir,
                                                     FLAGS.max_v_samples_per_dataset,
                                                     shuffle = False,
                                                     color_mode=FLAGS.img_mode,
-                                                    target_size=(img_height,
-                                                                 img_width),
-                                                    crop_size= crop_size,
+                                                    target_size=(img_width,
+                                                                 img_height),
                                                     batch_size = FLAGS.batch_size,
                                                    nb_windows = FLAGS.nb_windows)
 
@@ -191,7 +182,7 @@ def _main():
         initial_epoch = FLAGS.initial_epoch
 
     # Define model
-    model = getModel(crop_img_width, crop_img_height, img_channels,
+    model = getModel(img_width, img_height, img_channels,
                         output_dim, weights_path,
                      transfer=FLAGS.transfer_learning,
                      transfer_from=model_path)

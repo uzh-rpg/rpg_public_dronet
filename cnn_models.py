@@ -21,7 +21,8 @@ def resnet8(img_width, img_height, img_channels, output_dim):
     """
 
     # Input
-    img_input = Input(shape=(img_width, img_height, img_channels))
+    # Swap width and height because the numpy shape is (rows x cols)
+    img_input = Input(shape=(img_height, img_width, img_channels))
 
     x1 = Conv2D(32, (5, 5), strides=[2,2], padding='same')(img_input)
     x1 = MaxPooling2D(pool_size=(3, 3), strides=[2,2])(x1)
@@ -75,11 +76,11 @@ def resnet8(img_width, img_height, img_channels, output_dim):
     x7 = add([x5, x6])
 
     x = Flatten()(x7)
+    x = Activation('relu')(x)
     x = Dropout(0.5)(x)
 
     # TODO: Experiment with hidden layers
     # Gate localization
-    # x = Activation('softmax')(x)
     localization = Dense(output_dim, activation='softmax')(x) # Logits + Softmax
 
     model = Model(inputs=[img_input], outputs=[localization])

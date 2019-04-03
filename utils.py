@@ -26,12 +26,12 @@ class DroneDataGenerator(ImageDataGenerator):
 
     For an example usage, see the evaluate.py script
     """
-    def flow_from_directory(self, directory, max_samples, target_size=(224,224),
-            crop_size=(250,250), color_mode='grayscale', batch_size=32,
+    def flow_from_directory(self, directory, max_samples, target_size=None,
+            color_mode='grayscale', batch_size=32,
             shuffle=True, seed=None, follow_links=False, nb_windows=25):
         return DroneDirectoryIterator(
                 directory, max_samples, self,
-                target_size=target_size, crop_size=crop_size, color_mode=color_mode,
+                target_size=target_size, color_mode=color_mode,
                 batch_size=batch_size, shuffle=shuffle, seed=seed,
                 follow_links=follow_links, nb_windows=nb_windows)
 
@@ -67,7 +67,7 @@ class DroneDirectoryIterator(Iterator):
     # TODO: Add functionality to save images to have a look at the augmentation
     '''
     def __init__(self, directory, max_samples, image_data_generator,
-            target_size=(224,224), crop_size = (250,250), color_mode='grayscale',
+            target_size=None, color_mode='grayscale',
             batch_size=32, shuffle=True, seed=None, follow_links=False,
                  nb_windows=25):
         self.samples = 0
@@ -77,19 +77,15 @@ class DroneDirectoryIterator(Iterator):
         self.image_data_generator = image_data_generator
         # self.target_size = tuple(target_size)
         self.nb_windows = nb_windows
-        # if crop_size:
-            # self.crop_size = tuple(crop_size)
-        # else:
-            # self.crop_size = tuple(target_size)
         self.follow_links = follow_links
         if color_mode not in {'rgb', 'grayscale'}:
             raise ValueError('Invalid color mode:', color_mode,
                              '; expected "rgb" or "grayscale".')
         self.color_mode = color_mode
         if self.color_mode == 'rgb':
-            self.image_shape = self.crop_size + (3,)
+            self.image_shape = target_size + (3,)
         else:
-            self.image_shape = self.crop_size + (1,)
+            self.image_shape = target_size + (1,)
 
         # Idea = associate each filename with a corresponding steering or label
         self.filenames = []
@@ -162,9 +158,9 @@ class DroneDirectoryIterator(Iterator):
         # TODO: Use keras.utils.to_categorical(y, num_classes=None, dtype='float32')
         # which does this automatically!
         sqrt_win = sqrt(self.nb_windows)
-        windows_width = [int(i * self.image_shape[1] / sqrt_win)
+        windows_width = [int(i * self.image_shape[0] / sqrt_win)
                          for i in range(1, int(sqrt_win) + 1)]
-        windows_height = [int(i * self.image_shape[0] / sqrt_win)
+        windows_height = [int(i * self.image_shape[1] / sqrt_win)
                          for i in range(1, int(sqrt_win) + 1)]
         i, j = 0, 0
         if not visible:
@@ -198,9 +194,9 @@ class DroneDirectoryIterator(Iterator):
             return 0
 
         sqrt_win = sqrt(self.nb_windows)
-        windows_width = [int(i * self.image_shape[1] / sqrt_win)
+        windows_width = [int(i * self.image_shape[0] / sqrt_win)
                          for i in range(1, int(sqrt_win) + 1)]
-        windows_height = [int(i * self.image_shape[0] / sqrt_win)
+        windows_height = [int(i * self.image_shape[1] / sqrt_win)
                          for i in range(1, int(sqrt_win) + 1)]
         i, j = 0, 0
 
@@ -235,7 +231,9 @@ class DroneDirectoryIterator(Iterator):
         current_batch_size = index_array.shape[0]
         # Image transformation is not under thread lock, so it can be done in
         # parallel
-        batch_x = np.zeros((current_batch_size,) + self.image_shape,
+        batch_x = np.zeros((current_batch_size,) + (self.image_shape[1],
+                                                    self.image_shape[0],
+                                                    self.image_shape[2]),
                 dtype=K.floatx())
         batch_localization = np.zeros((current_batch_size, self.nb_windows + 1,),
                 dtype=K.floatx())
@@ -246,14 +244,8 @@ class DroneDirectoryIterator(Iterator):
         # Build batch of image data
         for i, j in enumerate(index_array):
             fname = self.filenames[j]
-            x = img_utils.load_img(
-                    os.path.join(self.directory, fname),
-                    grayscale=grayscale,
-                    crop_size=None,
-                    target_size=None)
-
-            # x = self.image_data_generator.random_transform(x)
-            # x = self.image_data_generator.standardize(x)
+            x = img_utils.load_img(os.path.join(self.directory, fname),
+                                   grayscale=grayscale)
             batch_x[i] = x
 
             # Build batch of localization and orientation data
