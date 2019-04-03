@@ -20,12 +20,14 @@ gflags.DEFINE_integer('batch_size', 32, 'Batch size in training and evaluation')
 gflags.DEFINE_integer('epochs', 100, 'Number of epochs for training')
 gflags.DEFINE_integer('log_rate', 10, 'Logging rate for full model (epochs)')
 gflags.DEFINE_integer('initial_epoch', 0, 'Initial epoch to start training')
-gflags.DEFINE_integer('max_t_samples_per_dataset', 50000, 'Maximum amount of'
+gflags.DEFINE_integer('max_t_samples_per_dataset', None, 'Maximum amount of'
                       ' training samples per individual dataset (subfolders inside the'
                       'root dataset dir)')
-gflags.DEFINE_integer('max_v_samples_per_dataset', 5000, 'Maximum amount of'
+gflags.DEFINE_integer('max_v_samples_per_dataset', None, 'Maximum amount of'
                       ' validation samples per individual dataset (subfolders inside the'
                       'root dataset dir)')
+gflags.DEFINE_integer('nb_visualizations', 10, 'Amount of graphically annotated'
+                      'images to export (evaluation)')
 
 # Files
 gflags.DEFINE_string('experiment_rootdir', "./model", 'Folder '

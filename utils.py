@@ -132,7 +132,7 @@ class DroneDirectoryIterator(Iterator):
 
         n = 0
         for filename in os.listdir(images_path):
-            if n == self.max_samples:
+            if self.max_samples and n == self.max_samples:
                 break
             is_valid = False
             for extension in self.formats:
@@ -298,11 +298,13 @@ def compute_predictions_and_gt(model, generator, steps,
     steps_done = 0
     all_outputs = None
     all_labels = None
+    all_inputs = None
     all_ts = [[]]
 
     if verbose == 1:
         progbar = Progbar(target=steps)
 
+    # TODO: Refactor this shit
     while steps_done < steps:
         generator_output = next(generator)
 
@@ -331,12 +333,19 @@ def compute_predictions_and_gt(model, generator, steps,
         else:
             all_labels = np.concatenate((all_labels, gt_labels[0]), axis=0)
 
+
+        if all_inputs is None:
+            all_inputs = x
+        else:
+            all_inputs = np.concatenate((all_inputs, x), axis=0)
+
+
         steps_done += 1
 
         if verbose == 1:
             progbar.update(steps_done)
 
-    return all_outputs, all_labels
+    return all_inputs, all_outputs, all_labels
 
 def hard_mining_entropy(k, nb_windows):
     """
