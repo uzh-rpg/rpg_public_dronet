@@ -14,6 +14,7 @@ import os
 import sys
 import utils
 import gflags
+import cnn_models
 import numpy as np
 
 
@@ -32,9 +33,9 @@ def compute_gate_localization_accuracy(predictions, ground_truth):
         if np.array_equal(pred_clean, ground_truth[i]):
             valid += 1
 
-    return int(valid / len(ground_truth) * 100)
+    return int((valid / len(ground_truth)) * 100)
 
-def save_visual_output(input, prediction, ground_truth):
+def save_visual_output(input, prediction, ground_truth, index):
     img = Image.fromarray(np.uint8(input), mode="RGB")
     draw = ImageDraw.Draw(img)
 
@@ -65,7 +66,7 @@ def save_visual_output(input, prediction, ground_truth):
     # Save img
     if not os.path.isdir("visualizations"):
         os.mkdir("visualizations")
-    img.save("visualizations/ground_truth_window-{}.png".format(gt_window))
+    img.save("visualizations/%06d.png" % index)
 
 
 def _main():
@@ -79,15 +80,18 @@ def _main():
     # Generate testing data
     test_datagen = utils.DroneDataGenerator()
     test_generator = test_datagen.flow_from_directory(FLAGS.test_dir,
-                          shuffle=True,
+                          shuffle=False,
                           color_mode=FLAGS.img_mode,
                           target_size=(FLAGS.img_width, FLAGS.img_height),
                           batch_size = FLAGS.batch_size,
                           max_samples=None)
 
     # Load json and create model
-    json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)
-    model = utils.jsonToModel(json_model_path)
+    # json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)
+    # model = utils.jsonToModel(json_model_path)
+    img_channels = 3 if FLAGS.img_mode == "rgb" else 1
+    output_dim = FLAGS.nb_windows + 1
+    model = cnn_models.resnet8(FLAGS.img_width, FLAGS.img_height, img_channels, output_dim)
 
     # Load weights
     weights_load_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
@@ -104,17 +108,24 @@ def _main():
     # Get predictions and ground truth
     n_samples = test_generator.samples
     nb_batches = int(np.ceil(n_samples / FLAGS.batch_size))
+    all_predictions = []
+    all_ground_truth = []
+    localization_accuracy = 0
 
-    inputs, predictions, ground_truth = utils.compute_predictions_and_gt(
-            model, test_generator, nb_batches, verbose = 1)
+    for i in range(nb_batches):
+        inputs, predictions, ground_truth = utils.compute_predictions_and_gt(
+                model, test_generator, 1, verbose = 1)
 
-    localization_accuracy = compute_gate_localization_accuracy(predictions,
-                                                               ground_truth)
+        for j in range(len(inputs)):
+            save_visual_output(inputs[j], predictions[j], ground_truth[j], (10*i)+j)
+            all_predictions.append(predictions[j])
+            all_ground_truth.append(ground_truth[j])
+
+    localization_accuracy = compute_gate_localization_accuracy(all_predictions,
+                                                           all_ground_truth)
 
     print("[*] Gate localization accuracy: {}%".format(localization_accuracy))
     print("[*] Generating {} prediction images...".format(FLAGS.nb_visualizations))
-    for i in range(FLAGS.nb_visualizations):
-        save_visual_output(inputs[i], predictions[i], ground_truth[i])
 
 def main(argv):
     # Utility main to load flags

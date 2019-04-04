@@ -121,7 +121,7 @@ class DroneDirectoryIterator(Iterator):
                 frame_no = int(line[0].split('.')[0])
                 key = "{}_{}".format(sub_dirs, frame_no)
                 self.ground_truth_loc[key] =\
-                    self._compute_location_labels(line[1:3], bool(int(line[4])))
+                    self._compute_location_labels(line[1:3], bool(int(line[-1])))
                     # self._compute_location_label(line[1:3], bool(int(line[4])))
                 self.gt_coord[key] = "{}x{}".format(line[1], line[2])
                 rot_annotations.append(line[3])
@@ -131,7 +131,7 @@ class DroneDirectoryIterator(Iterator):
             raise Exception("Annotations not found")
 
         n = 0
-        for filename in os.listdir(images_path):
+        for filename in sorted(os.listdir(images_path)):
             if self.max_samples and n == self.max_samples:
                 break
             is_valid = False
