@@ -35,8 +35,9 @@ def compute_gate_localization_accuracy(predictions, ground_truth):
 
     return int((valid / len(predictions)) * 100)
 
-def save_visual_output(input, prediction, ground_truth, index):
-    img = Image.fromarray(np.uint8(input), mode="RGB")
+def save_visual_output(input_img, prediction, ground_truth, index):
+    input_img *= 255.0/input.max()
+    img = Image.fromarray(np.uint8(input_img), mode="RGB")
     draw = ImageDraw.Draw(img)
 
     pred_window = np.argmax(prediction)
@@ -84,7 +85,7 @@ def _main():
                           color_mode=FLAGS.img_mode,
                           target_size=(FLAGS.img_width, FLAGS.img_height),
                           batch_size = FLAGS.batch_size,
-                          max_samples=None)
+                          max_samples=FLAGS.nb_visualizations)
 
     # Load json and create model
     # json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)
