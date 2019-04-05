@@ -260,7 +260,7 @@ class DroneDirectoryIterator(Iterator):
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
 
-        batch_y = [batch_localization] # TODO: add batch_orientation
+        batch_y = batch_localization # TODO: add batch_orientation
         return batch_x, batch_y
 
 
@@ -296,15 +296,13 @@ def compute_predictions_and_gt(model, generator, steps,
             data in an invalid format.
     """
     steps_done = 0
-    all_outputs = None
-    all_labels = None
-    all_inputs = None
-    all_ts = [[]]
+    all_outputs = []
+    all_labels = []
+    all_inputs = []
 
     if verbose == 1:
         progbar = Progbar(target=steps)
 
-    # TODO: Refactor this shit
     while steps_done < steps:
         generator_output = next(generator)
 
@@ -322,23 +320,9 @@ def compute_predictions_and_gt(model, generator, steps,
             raise ValueError('Output not valid for current evaluation')
 
         outputs = model.predict_on_batch(x)
-        if all_outputs is None:
-            all_outputs = outputs
-        else:
-            all_outputs = np.concatenate((all_outputs, outputs), axis=0)
-
-
-        if all_labels is None:
-            all_labels = gt_labels[0]
-        else:
-            all_labels = np.concatenate((all_labels, gt_labels[0]), axis=0)
-
-
-        if all_inputs is None:
-            all_inputs = x
-        else:
-            all_inputs = np.concatenate((all_inputs, x), axis=0)
-
+        all_outputs += [output for output in outputs]
+        all_labels += [label for label in gt_labels]
+        all_inputs += [input for input in x]
 
         steps_done += 1
 

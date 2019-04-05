@@ -33,7 +33,7 @@ def compute_gate_localization_accuracy(predictions, ground_truth):
         if np.array_equal(pred_clean, ground_truth[i]):
             valid += 1
 
-    return int((valid / len(ground_truth)) * 100)
+    return int((valid / len(predictions)) * 100)
 
 def save_visual_output(input, prediction, ground_truth, index):
     img = Image.fromarray(np.uint8(input), mode="RGB")
@@ -112,14 +112,17 @@ def _main():
     all_ground_truth = []
     localization_accuracy = 0
 
-    for i in range(nb_batches):
+    n = 0
+    step = 10
+    for i in range(0, nb_batches, step):
         inputs, predictions, ground_truth = utils.compute_predictions_and_gt(
-                model, test_generator, 1, verbose = 1)
+                model, test_generator, step, verbose = 1)
 
         for j in range(len(inputs)):
-            save_visual_output(inputs[j], predictions[j], ground_truth[j], (10*i)+j)
+            save_visual_output(inputs[j], predictions[j], ground_truth[j], n)
             all_predictions.append(predictions[j])
             all_ground_truth.append(ground_truth[j])
+            n += 1
 
     localization_accuracy = compute_gate_localization_accuracy(all_predictions,
                                                            all_ground_truth)
