@@ -78,7 +78,7 @@ def _main():
     img_width, img_height = FLAGS.img_width, FLAGS.img_height
 
     # Generate testing data
-    test_datagen = utils.DroneDataGenerator()
+    test_datagen = utils.DroneDataGenerator(rescale=1./255)
     test_generator = test_datagen.flow_from_directory(FLAGS.test_dir,
                           shuffle=False,
                           color_mode=FLAGS.img_mode,
