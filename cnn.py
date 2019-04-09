@@ -42,7 +42,7 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
                 print("Transfering weights from {} until layer 8...".format(transfer_from))
                 original_model = utils.jsonToModel(transfer_from)
                 weight_value_tuples = []
-                start_at = 2 if img_channels == 3 else 0
+                start_at = 3 if img_channels == 3 else 0
                 # Skip the last n layers
                 for layer in original_model.layers[start_at:-skip_layers]:
                     print("-> Layer {}".format(layer.name))
@@ -84,7 +84,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    optimizer = optimizers.Adam(lr=0.003, decay=1e-6)
+    optimizer = optimizers.Adam(lr=0.002, decay=1e-6)
 
     # Configure training process
     model.compile(loss=['categorical_crossentropy'],
@@ -142,10 +142,9 @@ def _main():
     # Generate training data with no real-time augmentation
     train_datagen = utils.DroneDataGenerator(rescale=1./255)
 
-    # Already shuffled ;)
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
                                                         FLAGS.max_t_samples_per_dataset,
-                                                        shuffle = False,
+                                                        shuffle = True,
                                                         color_mode=FLAGS.img_mode,
                                                         target_size=(img_width,
                                                                      img_height),
@@ -157,7 +156,7 @@ def _main():
 
     val_generator = val_datagen.flow_from_directory(FLAGS.val_dir,
                                                     FLAGS.max_v_samples_per_dataset,
-                                                    shuffle = False,
+                                                    shuffle = True,
                                                     color_mode=FLAGS.img_mode,
                                                     target_size=(img_width,
                                                                  img_height),

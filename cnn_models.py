@@ -1,7 +1,7 @@
 import keras
 from keras.models import Model
 from keras.layers import Dense, Dropout, Activation, Flatten, Input
-from keras.layers import Conv2D, MaxPooling2D
+from keras.layers import Conv2D, MaxPooling2D, GaussianNoise
 from keras.layers.merge import add
 from keras import regularizers
 
@@ -23,8 +23,9 @@ def resnet8(img_width, img_height, img_channels, output_dim):
     # Input
     # Swap width and height because the numpy shape is (rows x cols)
     img_input = Input(shape=(img_height, img_width, img_channels))
+    input_noised = GaussianNoise(0.05)(img_input)
 
-    x1 = Conv2D(32, (5, 5), strides=[2,2], padding='same')(img_input)
+    x1 = Conv2D(32, (5, 5), strides=[2,2], padding='same')(input_noised)
     x1 = MaxPooling2D(pool_size=(3, 3), strides=[2,2])(x1)
 
     # First residual block
