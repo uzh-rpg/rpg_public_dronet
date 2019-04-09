@@ -36,7 +36,7 @@ def compute_gate_localization_accuracy(predictions, ground_truth):
     return int((valid / len(predictions)) * 100)
 
 def save_visual_output(input_img, prediction, ground_truth, index):
-    input_img *= 255.0/input.max()
+    input_img *= 255.0/input_img.max()
     img = Image.fromarray(np.uint8(input_img), mode="RGB")
     draw = ImageDraw.Draw(img)
 

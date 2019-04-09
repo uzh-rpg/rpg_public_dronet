@@ -178,7 +178,7 @@ def _main():
         weights_path = None
     elif FLAGS.restore_model:
         # In this case weigths will start from the specified model
-        weights_path = os.path.join(FLAGS.weights_fname)
+        weights_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
         initial_epoch = FLAGS.initial_epoch
 
     # Define model
