@@ -18,6 +18,7 @@ import keras.backend as K
 from common_flags import FLAGS
 
 
+# FIXME: Transfer learning doesn't work !!!
 def getModel(img_width, img_height, img_channels, output_dim, weights_path,
              transfer=False, transfer_from=None, skip_layers=3):
     """
@@ -177,7 +178,7 @@ def _main():
         weights_path = None
     elif FLAGS.restore_model:
         # In this case weigths will start from the specified model
-        weights_path = os.path.join(FLAGS.weights_fname)
+        weights_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
         initial_epoch = FLAGS.initial_epoch
 
     # Define model
