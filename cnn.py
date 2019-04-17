@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import os
 import sys
+import h5py
 import gflags
 
 from keras.callbacks import ModelCheckpoint, TensorBoard
@@ -18,7 +19,6 @@ import keras.backend as K
 from common_flags import FLAGS
 
 
-# FIXME: Transfer learning doesn't work !!!
 def getModel(img_width, img_height, img_channels, output_dim, weights_path,
              transfer=False, transfer_from=None, skip_layers=3):
     """
@@ -38,26 +38,17 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
     if weights_path:
         try:
             print("Loaded model from {}".format(weights_path))
+            f = h5py.File(weights_path)
             model_layers = [layer.name for layer in model.layers]
+            layer_dict = dict([(layer.name, layer) for layer in model.layers])
             if transfer and transfer_from is not None:
-                print("Transfering weights from {} until layer 8...".format(transfer_from))
-                original_model = utils.jsonToModel(transfer_from)
-                weight_value_tuples = []
-                start_at = 3 if img_channels == 3 else 0
-                # Skip the last n layers
-                for layer in original_model.layers[start_at:-skip_layers]:
-                    print("-> Layer {}".format(layer.name))
-                    if layer.name in model_layers:
-                        target_layer = model.get_layer(name=layer.name)
-                        print("--> Target layer: {}".format(target_layer.name))
-                        symbolic_weights = target_layer.trainable_weights + target_layer.non_trainable_weights
-                        weight_values = layer.get_weights()
-                        weight_value_tuples += zip(symbolic_weights, weight_values)
-                    else:
-                        print("--> [x] No match in target model! Skipping...")
-
-                # Apply to the target model
-                K.batch_set_value(weight_value_tuples)
+                print("Transfering weights from {}...".format(transfer_from))
+                for i in layer_dict.keys():
+                    if i in f:
+                        weight_names = f[i].attrs["weight_names"]
+                        weights = [f[i][j] for j in weight_names]
+                        index = model_layers.index(i)
+                        model.layers[index].set_weights(weights)
             else:
                 model.load_weights(weights_path)
         except Exception as e:
@@ -85,7 +76,8 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    optimizer = optimizers.Adam(lr=0.002, decay=1e-6)
+    # optimizer = optimizers.Adam(lr=0.002, decay=1e-6)
+    optimizer = optimizers.Adam()
 
     # Configure training process
     model.compile(loss=['categorical_crossentropy'],

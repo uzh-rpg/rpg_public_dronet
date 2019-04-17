@@ -120,8 +120,13 @@ class DroneDirectoryIterator(Iterator):
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
                 key = "{}_{}".format(sub_dirs, frame_no)
+                gate_center = [int(line[1]), int(line[2])]
+                on_screen = (gate_center[0] >= 0 and gate_center[0] <=
+                             self.image_shape[0]) and (gate_center[1] >= 0 and
+                                                   gate_center[1] <=
+                                                   self.image_shape[1])
                 self.ground_truth_loc[key] =\
-                    self._compute_location_labels(line[1:3], bool(int(line[-1])))
+                    self._compute_location_labels(line[1:3], on_screen)
                     # self._compute_location_label(line[1:3], bool(int(line[4])))
                 self.gt_coord[key] = "{}x{}".format(line[1], line[2])
                 rot_annotations.append(line[3])
