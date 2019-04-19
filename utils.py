@@ -93,6 +93,7 @@ class DroneDirectoryIterator(Iterator):
         self.gt_coord = dict()
         self.ground_truth_rot = []
 
+        print("parsing {}".format(directory))
         self._walk_dir(directory)
 
         # Conversion of list into array
@@ -108,6 +109,7 @@ class DroneDirectoryIterator(Iterator):
             if "annotations.csv" in files:
                 sub_dirs = os.path.relpath(root, path).split('/')
                 sub_dirs = ''.join(sub_dirs)
+                print("parsing subdir {}".format(root))
                 self._parse_dir(root, sub_dirs)
 
     def _parse_dir(self, path, sub_dirs):
@@ -121,8 +123,7 @@ class DroneDirectoryIterator(Iterator):
                 frame_no = int(line[0].split('.')[0])
                 key = "{}_{}".format(sub_dirs, frame_no)
                 self.ground_truth_loc[key] =\
-                    self._compute_location_labels(line[1:3], bool(int(line[-1])))
-                    # self._compute_location_label(line[1:3], bool(int(line[4])))
+                    self._compute_location_labels(line[1:3], bool(int(float(line[-1]))))
                 self.gt_coord[key] = "{}x{}".format(line[1], line[2])
                 rot_annotations.append(line[3])
 
@@ -169,12 +170,12 @@ class DroneDirectoryIterator(Iterator):
             return labels
 
         for index, window_i in enumerate(windows_width):
-            if int(coordinates[0]) < window_i:
+            if int(float(coordinates[0])) < window_i:
                 i = index + 1 # Start at 1
                 break
 
         for index, window_h in enumerate(windows_height):
-            if int(coordinates[1]) < window_h:
+            if int(float(coordinates[1])) < window_h:
                 j = index + 1 # Start at 1
                 break
 
@@ -256,7 +257,10 @@ class DroneDirectoryIterator(Iterator):
             frame_no = int(os.path.split(fname)[-1].split('.')[0])
             key = "{}_{}".format(sub_dirs_str, frame_no)
             # batch_localization[i, 0] = 1.0
-            batch_localization[i, :] = self.ground_truth_loc[key]
+            if key in self.ground_truth_loc:
+                batch_localization[i, :] = self.ground_truth_loc[key]
+            else:
+                batch_localization[i, 0] = 0
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
 
@@ -330,6 +334,66 @@ def compute_predictions_and_gt(model, generator, steps,
             progbar.update(steps_done)
 
     return all_inputs, all_outputs, all_labels
+
+def compute_predictions(model, generator, steps,
+                                     max_q_size=10,
+                                     pickle_safe=False, verbose=0):
+    """
+    # Arguments
+        generator: Generator yielding batches of input samples.
+        steps: Total number of steps (batches of samples)
+            to yield from `generator` before stopping.
+        max_q_size: Maximum size for the generator queue.
+        pickle_safe: If `True`, use process based threading.
+            Note that because
+            this implementation relies on multiprocessing,
+            you should not pass
+            non picklable arguments to the generator
+            as they can't be passed
+            easily to children processes.
+        verbose: verbosity mode, 0 or 1.
+
+    # Returns
+        Numpy array(s) of predictions and associated ground truth.
+
+    # Raises
+        ValueError: In case the generator yields
+            data in an invalid format.
+    """
+    steps_done = 0
+    all_outputs = []
+    all_inputs = []
+
+    if verbose == 1:
+        progbar = Progbar(target=steps)
+
+    while steps_done < steps:
+        generator_output = next(generator)
+
+        if isinstance(generator_output, tuple):
+            if len(generator_output) == 2:
+                x, gt_labels = generator_output
+            elif len(generator_output) == 3:
+                x, gt_labels, _ = generator_output
+            else:
+                raise ValueError('output of generator should be '
+                                 'a tuple `(x, y, sample_weight)` '
+                                 'or `(x, y)`. Found: ' +
+                                 str(generator_output))
+        else:
+            raise ValueError('Output not valid for current evaluation')
+
+        outputs = model.predict_on_batch(x)
+        all_outputs += [output for output in outputs]
+        all_inputs += [input for input in x]
+
+        steps_done += 1
+
+        if verbose == 1:
+            progbar.update(steps_done)
+
+    return all_inputs, all_outputs
+
 
 def hard_mining_entropy(k, nb_windows):
     """
