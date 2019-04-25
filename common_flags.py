@@ -5,12 +5,8 @@ import gflags
 FLAGS = gflags.FLAGS
 
 # Input
-gflags.DEFINE_integer('img_width', 640, 'Target Image Width')
-gflags.DEFINE_integer('img_height', 480, 'Target Image Height')
-
-gflags.DEFINE_integer('crop_img_width', 200, 'Cropped image widht')
-gflags.DEFINE_integer('crop_img_height', 200, 'Cropped image height')
-gflags.DEFINE_bool('no_crop', False, 'Whether to crop the input image')
+gflags.DEFINE_integer('img_width', 340, 'Target Image Width')
+gflags.DEFINE_integer('img_height', 255, 'Target Image Height')
 
 gflags.DEFINE_string('img_mode', "grayscale", 'Load mode for images, either '
                      'rgb or grayscale')
@@ -28,6 +24,8 @@ gflags.DEFINE_integer('max_v_samples_per_dataset', None, 'Maximum amount of'
                       'root dataset dir)')
 gflags.DEFINE_integer('nb_visualizations', 10, 'Amount of graphically annotated'
                       'images to export (evaluation)')
+gflags.DEFINE_bool('freeze_filters', False, 'Wether to freeze the convolution'
+                   ' filters during training')
 
 # Files
 gflags.DEFINE_string('experiment_rootdir', "./model", 'Folder '
