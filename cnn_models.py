@@ -81,8 +81,8 @@ def resnet8(img_width, img_height, img_channels, output_dim):
     x = Dropout(0.5)(x)
 
     # TODO: Experiment with hidden layers
-    # hidden = Dense(256, activation='relu')(x)
-    # hidden = Dropout(0.1)(hidden)
+    hidden = Dense(256, activation='relu')(x)
+    hidden = Dropout(0.1)(hidden)
     # Gate localization
     localization = Dense(output_dim, activation='softmax')(x) # Logits + Softmax
 
