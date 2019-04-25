@@ -84,7 +84,7 @@ def resnet8(img_width, img_height, img_channels, output_dim):
     hidden = Dense(256, activation='relu')(x)
     hidden = Dropout(0.1)(hidden)
     # Gate localization
-    localization = Dense(output_dim, activation='softmax')(x) # Logits + Softmax
+    localization = Dense(output_dim, activation='softmax')(hidden) # Logits + Softmax
 
     model = Model(inputs=[img_input], outputs=[localization])
     print(model.summary())
