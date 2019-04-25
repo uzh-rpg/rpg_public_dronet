@@ -57,3 +57,9 @@ gflags.DEFINE_string('json_model_fname', "model_struct.json",
 
 gflags.DEFINE_integer('nb_windows', 25, 'Number of regions to segmentate the'
                      ' gate location on the image')
+
+# Testing / Visualizing
+gflags.DEFINE_integer('successive_frames', 5, 'number of successive frames to'
+                      ' use for the prediction filter (backward and forward)')
+gflags.DEFINE_integer('max_outliers', 3, 'number of successive frames to'
+                      ' use for the prediction filter')

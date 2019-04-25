@@ -24,6 +24,18 @@ from keras import backend as K
 from common_flags import FLAGS
 from constants import TEST_PHASE
 
+
+'''
+Looks at previous and future predictions and see if the given prediction is an
+outlier, in which case it is recomputed as an interpolation of its direct
+neighbours.
+'''
+def filter_prediction(prediction, previous_predictions, next_predictions):
+    if all(p == previous_predictions[0] for p in previous_predictions) and
+        all(p == next_predictions[0] for p in next_predictions):
+        return previous_predictions[0]
+
+
 def save_visual_output(input_img, prediction, index):
     if FLAGS.img_mode == "rgb":
         img_mode = "RGB"
@@ -101,6 +113,8 @@ def _main():
     nb_batches = int(np.ceil(n_samples / FLAGS.batch_size))
     localization_accuracy = 0
 
+    previous_predictions = []
+    next_predictions = []
     n = 0
     step = 10
     for i in range(0, nb_batches, step):
@@ -108,7 +122,21 @@ def _main():
                 model, test_generator, step, verbose = 1)
 
         for j in range(len(inputs)):
+            if n > (2*FLAGS.successive_frames + FLAGS.max_outliers):
+                predictions[j] = filter_prediction(predictions[j],
+                                                   previous_predictions,
+                                                   next_predictions)
+                if len(previous_predictions) > FLAGS.successive_frames:
+                    del previous_predictions[0]
+                if len(next_predictions) > FLAGS.successive_frames:
+                    del next_predictions[0]
+
             save_visual_output(inputs[j], predictions[j], n)
+
+            if j > 1:
+                previous_predictions.append(prediction[j-1])
+            if j < len(inputs):
+                next_predictions.append(prediction[j+1])
             n += 1
 
     print("[*] Generating {} prediction images...".format(n))
