@@ -24,17 +24,12 @@ from keras import backend as K
 from common_flags import FLAGS
 from constants import TEST_PHASE
 
-
-'''
-Looks at previous and future predictions and see if the given prediction is an
-outlier, in which case it is recomputed as an interpolation of its direct
-neighbours.
-'''
-def filter_prediction(prediction, previous_predictions, next_predictions):
-    if all(p == previous_predictions[0] for p in previous_predictions) and
-        all(p == next_predictions[0] for p in next_predictions):
-        return previous_predictions[0]
-
+def median_filter(prediction, previous_predictions):
+    if len(previous_predictions) < FLAGS.successive_frames:
+        return np.argmax(prediction)
+    window = previous_predictions + [np.argmax(prediction)]
+    window.sort()
+    return window[int(len(window)/2)]
 
 def save_visual_output(input_img, prediction, index):
     if FLAGS.img_mode == "rgb":
@@ -52,7 +47,8 @@ def save_visual_output(input_img, prediction, index):
     window_width = FLAGS.img_width / sqrt_win
     window_height = FLAGS.img_height / sqrt_win
 
-    pred_window = np.argmax(prediction)
+    # pred_window = np.argmax(prediction)
+    pred_window = prediction
 
     if pred_window == 0:
         draw.text(((img.width / 2)-30, (img.height/2)-5), "NO GATE", "red")
@@ -60,7 +56,7 @@ def save_visual_output(input_img, prediction, index):
         # Draw a red square at the estimated region
         window_idx = pred_window % sqrt_win
         if window_idx == 0:
-            window_indx = sqrt_win
+            window_idx = sqrt_win
         window_x = (window_idx - 1) * window_width
         window_y = window_height * int(pred_window/sqrt_win)
         draw.rectangle([(window_x, window_y),
@@ -113,8 +109,10 @@ def _main():
     nb_batches = int(np.ceil(n_samples / FLAGS.batch_size))
     localization_accuracy = 0
 
+    if (FLAGS.successive_frames % 2) != 0:
+        FLAGS.successive_frames -= 1
+
     previous_predictions = []
-    next_predictions = []
     n = 0
     step = 10
     for i in range(0, nb_batches, step):
@@ -122,21 +120,12 @@ def _main():
                 model, test_generator, step, verbose = 1)
 
         for j in range(len(inputs)):
-            if n > (2*FLAGS.successive_frames + FLAGS.max_outliers):
-                predictions[j] = filter_prediction(predictions[j],
-                                                   previous_predictions,
-                                                   next_predictions)
-                if len(previous_predictions) > FLAGS.successive_frames:
-                    del previous_predictions[0]
-                if len(next_predictions) > FLAGS.successive_frames:
-                    del next_predictions[0]
-
-            save_visual_output(inputs[j], predictions[j], n)
-
-            if j > 1:
-                previous_predictions.append(prediction[j-1])
-            if j < len(inputs):
-                next_predictions.append(prediction[j+1])
+            filtered_pred = median_filter(predictions[j],
+                                          previous_predictions)
+            if len(previous_predictions) >= FLAGS.successive_frames:
+                del previous_predictions[0]
+            save_visual_output(inputs[j], filtered_pred, n)
+            previous_predictions.append(np.argmax(predictions[j]))
             n += 1
 
     print("[*] Generating {} prediction images...".format(n))
