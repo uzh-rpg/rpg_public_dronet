@@ -46,7 +46,10 @@ def save_visual_output(input_img, prediction, index):
         draw.text(((img.width / 2)-30, (img.height/2)-5), "NO GATE", "red")
     else:
         # Draw a red square at the estimated region
-        window_x = window_width * (pred_window - (sqrt_win * int(pred_window/sqrt_win)) - 1)
+        window_idx = pred_window % sqrt_win
+        if window_idx == 0:
+            window_indx = sqrt_win
+        window_x = (window_idx - 1) * window_width
         window_y = window_height * int(pred_window/sqrt_win)
         draw.rectangle([(window_x, window_y),
                        (window_x + window_width, window_y + window_height)],
