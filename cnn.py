@@ -34,7 +34,8 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
     # Returns
        model: A Model instance.
     """
-    model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim)
+    model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim,
+                              FLAGS.freeze_filters)
     if weights_path:
         try:
             print("Loaded model from {}".format(weights_path))
@@ -76,8 +77,8 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    # optimizer = optimizers.Adam(lr=0.002, decay=1e-6)
-    optimizer = optimizers.Adam()
+    optimizer = optimizers.Adam(lr=0.003)
+    # optimizer = optimizers.Adam()
 
     # Configure training process
     model.compile(loss=['categorical_crossentropy'],
