@@ -134,16 +134,24 @@ def _main():
     output_dim = FLAGS.nb_windows + 1
 
     # Generate training data with no real-time augmentation
-    train_datagen = utils.DroneDataGenerator(rescale=1./255)
+    # train_datagen = utils.fit_flow_from_directory(rescale=1./255)
+    # train_datagen = utils.DroneDataGenerator(rescale=1./255)
 
-    train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
-                                                        FLAGS.max_t_samples_per_dataset,
-                                                        shuffle = True,
-                                                        color_mode=FLAGS.img_mode,
-                                                        target_size=(img_width,
-                                                                     img_height),
-                                                        batch_size = FLAGS.batch_size,
-                                                       nb_windows = FLAGS.nb_windows)
+    config = [
+        'rescale': 1./255,
+        'featurewise_center': True,
+        'featurewise_std_normalization': True,
+        'zca_whitening': True
+    ]
+    train_generator = utils.fit_flow_from_directory(config, 0.1,
+                                                    FLAGS.train_dir,
+                                                    FLAGS.max_t_samples_per_dataset,
+                                                    shuffle=True,
+                                                    color_mode=FLAGS.img_mode,
+                                                    target_size=(img_width,
+                                                                 img_height),
+                                                    batch_size=FLAGS.batch_size,
+                                                    nb_windows=FLAGS.nb_windows)
 
        # Generate validation data with no real-time augmentation
     val_datagen = utils.DroneDataGenerator(rescale=1./255)

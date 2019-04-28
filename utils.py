@@ -15,6 +15,29 @@ from keras.models import model_from_json
 import img_utils
 
 
+def fit_flow_from_directory(config, fit_sample_size, directory, max_samples,
+                            target_size=None, color_mode='grayscale',
+                            batch_size=32, shuffle=True, seed=None,
+                            follow_links=False, nb_windows=25,
+                            sample_shape=(340, 255, 1)):
+    drone_data_gen = DroneDataGenerator(**config)
+    batches = drone_data_gen.flow_from_directory(directory, max_samples, target_size,
+                                      color_mode, batch_size, shuffle,
+                                       seed, follow_links, nb_windows)
+    fit_samples  = np.zeros(shape=sample_shape)
+    for i in range(batches.samples/batch_size):
+        imgs, labels = next(batches)
+        index = np.random.choice(imgs.shape[0], batch_size*fit_sample_size,
+                                replace=False)
+        np.vstack((fit_samples, imgs[index]))
+    fit_drone_data_gen = DroneDataGenerator(**config)
+    fit_drone_data_gen.fit(fit_samples)
+    return fit_drone_data_gen.flow_from_directory(directory, max_samples,
+                                                  target_size, color_mode,
+                                                  batch_size, shuffle, seed,
+                                                  follow_links, nb_windows)
+
+
 class DroneDataGenerator(ImageDataGenerator):
     """
     Generate minibatches of images and labels with real-time augmentation.
