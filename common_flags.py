@@ -5,8 +5,8 @@ import gflags
 FLAGS = gflags.FLAGS
 
 # Input
-gflags.DEFINE_integer('img_width', 640, 'Target Image Width')
-gflags.DEFINE_integer('img_height', 480, 'Target Image Height')
+gflags.DEFINE_integer('img_width', 340, 'Target Image Width')
+gflags.DEFINE_integer('img_height', 255, 'Target Image Height')
 
 gflags.DEFINE_integer('crop_img_width', 200, 'Cropped image widht')
 gflags.DEFINE_integer('crop_img_height', 200, 'Cropped image height')
@@ -26,7 +26,7 @@ gflags.DEFINE_integer('max_t_samples_per_dataset', None, 'Maximum amount of'
 gflags.DEFINE_integer('max_v_samples_per_dataset', None, 'Maximum amount of'
                       ' validation samples per individual dataset (subfolders inside the'
                       'root dataset dir)')
-gflags.DEFINE_integer('nb_visualizations', 10, 'Amount of graphically annotated'
+gflags.DEFINE_integer('nb_visualizations', None, 'Amount of graphically annotated'
                       'images to export (evaluation)')
 
 # Files
@@ -57,3 +57,9 @@ gflags.DEFINE_string('json_model_fname', "model_struct.json",
 
 gflags.DEFINE_integer('nb_windows', 25, 'Number of regions to segmentate the'
                      ' gate location on the image')
+
+# Testing / Visualizing
+gflags.DEFINE_integer('successive_frames', 4, 'number of successive frames to'
+                      ' use for the prediction filter (backward and forward)')
+gflags.DEFINE_integer('max_outliers', 3, 'number of successive frames to'
+                      ' use for the prediction filter')

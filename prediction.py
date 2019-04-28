@@ -24,44 +24,39 @@ from keras import backend as K
 from common_flags import FLAGS
 from constants import TEST_PHASE
 
+def median_filter(prediction, previous_predictions):
+    if len(previous_predictions) < FLAGS.successive_frames:
+        return np.argmax(prediction)
+    window = previous_predictions + [np.argmax(prediction)]
+    window.sort()
+    return window[int(len(window)/2)]
 
-def compute_gate_localization_accuracy(predictions, ground_truth):
-    valid = 0
-    for i, pred in enumerate(predictions):
-        pred_clean = np.zeros(len(pred))
-        pred_clean[np.argmax(pred)] = 1.0
-        if np.array_equal(pred_clean, ground_truth[i]):
-            valid += 1
-
-    return int((valid / len(predictions)) * 100)
-
-def save_visual_output(input_img, prediction, ground_truth, index):
+def save_visual_output(input_img, prediction, index):
+    if FLAGS.img_mode == "rgb":
+        img_mode = "RGB"
+    else:
+        img_mode = "L"
     input_img *= 255.0/input_img.max()
-    img = Image.fromarray(np.uint8(input_img), mode="RGB")
+    np_array = np.uint8(input_img)
+    img = Image.fromarray(np_array.reshape((np_array.shape[0],
+                                           np_array.shape[1])), mode=img_mode)
+    img = img.convert("RGB")
     draw = ImageDraw.Draw(img)
-
-    pred_window = np.argmax(prediction)
-    gt_window = np.argmax(ground_truth)
 
     sqrt_win = int(sqrt(FLAGS.nb_windows))
     window_width = FLAGS.img_width / sqrt_win
     window_height = FLAGS.img_height / sqrt_win
 
-    # Draw a green cross at the ground truth location
-    if gt_window != 0:
-        window_x = window_width * (gt_window - (sqrt_win * int(gt_window/sqrt_win)) - 1)
-        window_y = window_height * int(gt_window/sqrt_win)
-        draw.rectangle([(window_x, window_y),
-                       (window_x + window_width, window_y + window_height)],
-                       outline="green", width=5)
+    # pred_window = np.argmax(prediction)
+    pred_window = prediction
 
     if pred_window == 0:
-        draw.text(((img.width / 2)-30, (img.height/2)-5), "NO GATE", (255, 0, 0, 255))
+        draw.text(((img.width / 2)-30, (img.height/2)-5), "NO GATE", "red")
     else:
         # Draw a red square at the estimated region
         window_idx = pred_window % sqrt_win
         if window_idx == 0:
-            window_indx = sqrt_win
+            window_idx = sqrt_win
         window_x = (window_idx - 1) * window_width
         window_y = window_height * int(pred_window/sqrt_win)
         draw.rectangle([(window_x, window_y),
@@ -112,27 +107,28 @@ def _main():
     # Get predictions and ground truth
     n_samples = test_generator.samples
     nb_batches = int(np.ceil(n_samples / FLAGS.batch_size))
-    all_predictions = []
-    all_ground_truth = []
     localization_accuracy = 0
 
+    if (FLAGS.successive_frames % 2) != 0:
+        FLAGS.successive_frames -= 1
+
+    previous_predictions = []
     n = 0
     step = 10
     for i in range(0, nb_batches, step):
-        inputs, predictions, ground_truth = utils.compute_predictions_and_gt(
+        inputs, predictions = utils.compute_predictions(
                 model, test_generator, step, verbose = 1)
 
         for j in range(len(inputs)):
-            save_visual_output(inputs[j], predictions[j], ground_truth[j], n)
-            all_predictions.append(predictions[j])
-            all_ground_truth.append(ground_truth[j])
+            filtered_pred = median_filter(predictions[j],
+                                          previous_predictions)
+            if len(previous_predictions) >= FLAGS.successive_frames:
+                del previous_predictions[0]
+            save_visual_output(inputs[j], filtered_pred, n)
+            previous_predictions.append(np.argmax(predictions[j]))
             n += 1
 
-    localization_accuracy = compute_gate_localization_accuracy(all_predictions,
-                                                           all_ground_truth)
-
-    print("[*] Gate localization accuracy: {}%".format(localization_accuracy))
-    print("[*] Generating {} prediction images...".format(FLAGS.nb_visualizations))
+    print("[*] Generating {} prediction images...".format(n))
 
 def main(argv):
     # Utility main to load flags

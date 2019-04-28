@@ -93,6 +93,7 @@ class DroneDirectoryIterator(Iterator):
         self.gt_coord = dict()
         self.ground_truth_rot = []
 
+        print("parsing {}".format(directory))
         self._walk_dir(directory)
 
         # Conversion of list into array
@@ -108,6 +109,7 @@ class DroneDirectoryIterator(Iterator):
             if "annotations.csv" in files:
                 sub_dirs = os.path.relpath(root, path).split('/')
                 sub_dirs = ''.join(sub_dirs)
+                print("parsing subdir {}".format(root))
                 self._parse_dir(root, sub_dirs)
 
     def _parse_dir(self, path, sub_dirs):
@@ -127,7 +129,7 @@ class DroneDirectoryIterator(Iterator):
                                                    self.image_shape[1])
                 self.ground_truth_loc[key] =\
                     self._compute_location_labels(line[1:3], on_screen)
-                    # self._compute_location_label(line[1:3], bool(int(line[4])))
+                    # self._compute_location_labels(line[1:3], bool(int(float(line[-1]))))
                 self.gt_coord[key] = "{}x{}".format(line[1], line[2])
                 rot_annotations.append(line[3])
 
@@ -136,7 +138,7 @@ class DroneDirectoryIterator(Iterator):
             raise Exception("Annotations not found")
 
         n = 0
-        for filename in os.listdir(images_path):
+        for filename in sorted(os.listdir(images_path)):
             if self.max_samples and n == self.max_samples:
                 break
             is_valid = False
@@ -152,7 +154,6 @@ class DroneDirectoryIterator(Iterator):
                 self.samples += 1
                 n += 1
 
-    # TODO: What if we crop ?! The labels will be wrong :'(
     def _compute_location_labels(self, coordinates, visible):
         '''
         Computes the gate location window from the given pixel coordinates, and
@@ -174,49 +175,18 @@ class DroneDirectoryIterator(Iterator):
             return labels
 
         for index, window_i in enumerate(windows_width):
-            if int(coordinates[0]) < window_i:
+            if int(float(coordinates[0])) < window_i:
                 i = index + 1 # Start at 1
                 break
 
         for index, window_h in enumerate(windows_height):
-            if int(coordinates[1]) < window_h:
+            if int(float(coordinates[1])) < window_h:
                 j = index + 1 # Start at 1
                 break
 
         labels = [0 for i in range(self.nb_windows + 1)]
         labels[int(i + ((j-1)*sqrt_win))] = 1
         return labels
-
-    def _compute_location_label(self, coordinates, visible):
-        '''
-        Computes the gate location window from the given pixel coordinates, and
-        returns an integer corresponding to the window/region in the set {0:N + 1 windows (+1
-        because a special window is defined for the case where the gate is not
-        visible)}, which is the input format for Keras'
-        sparse_categorical_crossentropy loss function.
-        '''
-        if not visible:
-            return 0
-
-        sqrt_win = sqrt(self.nb_windows)
-        windows_width = [int(i * self.image_shape[0] / sqrt_win)
-                         for i in range(1, int(sqrt_win) + 1)]
-        windows_height = [int(i * self.image_shape[1] / sqrt_win)
-                         for i in range(1, int(sqrt_win) + 1)]
-        i, j = 0, 0
-
-        for index, window_i in enumerate(windows_width):
-            if int(coordinates[0]) < window_i:
-                i = index + 1 # Start at 1
-                break
-
-        for index, window_h in enumerate(windows_height):
-            if int(coordinates[1]) < window_h:
-                j = index + 1 # Start at 1
-                break
-
-        return int(i + ((j-1)*sqrt_win))
-
 
     def next(self):
         """
@@ -261,11 +231,14 @@ class DroneDirectoryIterator(Iterator):
             frame_no = int(os.path.split(fname)[-1].split('.')[0])
             key = "{}_{}".format(sub_dirs_str, frame_no)
             # batch_localization[i, 0] = 1.0
-            batch_localization[i, :] = self.ground_truth_loc[key]
+            if key in self.ground_truth_loc:
+                batch_localization[i, :] = self.ground_truth_loc[key]
+            else:
+                batch_localization[i, 0] = 0
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
 
-        batch_y = [batch_localization] # TODO: add batch_orientation
+        batch_y = batch_localization # TODO: add batch_orientation
         return batch_x, batch_y
 
 
@@ -301,15 +274,13 @@ def compute_predictions_and_gt(model, generator, steps,
             data in an invalid format.
     """
     steps_done = 0
-    all_outputs = None
-    all_labels = None
-    all_inputs = None
-    all_ts = [[]]
+    all_outputs = []
+    all_labels = []
+    all_inputs = []
 
     if verbose == 1:
         progbar = Progbar(target=steps)
 
-    # TODO: Refactor this shit
     while steps_done < steps:
         generator_output = next(generator)
 
@@ -327,23 +298,9 @@ def compute_predictions_and_gt(model, generator, steps,
             raise ValueError('Output not valid for current evaluation')
 
         outputs = model.predict_on_batch(x)
-        if all_outputs is None:
-            all_outputs = outputs
-        else:
-            all_outputs = np.concatenate((all_outputs, outputs), axis=0)
-
-
-        if all_labels is None:
-            all_labels = gt_labels[0]
-        else:
-            all_labels = np.concatenate((all_labels, gt_labels[0]), axis=0)
-
-
-        if all_inputs is None:
-            all_inputs = x
-        else:
-            all_inputs = np.concatenate((all_inputs, x), axis=0)
-
+        all_outputs += [output for output in outputs]
+        all_labels += [label for label in gt_labels]
+        all_inputs += [input for input in x]
 
         steps_done += 1
 
@@ -351,6 +308,66 @@ def compute_predictions_and_gt(model, generator, steps,
             progbar.update(steps_done)
 
     return all_inputs, all_outputs, all_labels
+
+def compute_predictions(model, generator, steps,
+                                     max_q_size=10,
+                                     pickle_safe=False, verbose=0):
+    """
+    # Arguments
+        generator: Generator yielding batches of input samples.
+        steps: Total number of steps (batches of samples)
+            to yield from `generator` before stopping.
+        max_q_size: Maximum size for the generator queue.
+        pickle_safe: If `True`, use process based threading.
+            Note that because
+            this implementation relies on multiprocessing,
+            you should not pass
+            non picklable arguments to the generator
+            as they can't be passed
+            easily to children processes.
+        verbose: verbosity mode, 0 or 1.
+
+    # Returns
+        Numpy array(s) of predictions and associated ground truth.
+
+    # Raises
+        ValueError: In case the generator yields
+            data in an invalid format.
+    """
+    steps_done = 0
+    all_outputs = []
+    all_inputs = []
+
+    if verbose == 1:
+        progbar = Progbar(target=steps)
+
+    while steps_done < steps:
+        generator_output = next(generator)
+
+        if isinstance(generator_output, tuple):
+            if len(generator_output) == 2:
+                x, gt_labels = generator_output
+            elif len(generator_output) == 3:
+                x, gt_labels, _ = generator_output
+            else:
+                raise ValueError('output of generator should be '
+                                 'a tuple `(x, y, sample_weight)` '
+                                 'or `(x, y)`. Found: ' +
+                                 str(generator_output))
+        else:
+            raise ValueError('Output not valid for current evaluation')
+
+        outputs = model.predict_on_batch(x)
+        all_outputs += [output for output in outputs]
+        all_inputs += [input for input in x]
+
+        steps_done += 1
+
+        if verbose == 1:
+            progbar.update(steps_done)
+
+    return all_inputs, all_outputs
+
 
 def hard_mining_entropy(k, nb_windows):
     """
@@ -390,13 +407,6 @@ def hard_mining_entropy(k, nb_windows):
             return hard_l_loc
 
     return custom_bin_crossentropy
-
-
-def softmax_cross_entropy_loss(k, nb_windows):
-    def simple_cross_entropy_from_logits(y_true, y_pred):
-        return tf.losses.softmax_cross_entropy(y_true, y_pred)
-
-    return simple_cross_entropy_from_logits
 
 def hard_mining_categorical_crossentropy(k, nb_windows):
 
