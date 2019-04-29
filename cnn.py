@@ -77,7 +77,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    optimizer = optimizers.Adam(lr=0.003)
+    optimizer = optimizers.Adam(lr=0.005)
     # optimizer = optimizers.Adam()
 
     # Configure training process
@@ -137,12 +137,11 @@ def _main():
     # train_datagen = utils.fit_flow_from_directory(rescale=1./255)
     # train_datagen = utils.DroneDataGenerator(rescale=1./255)
 
-    config = [
+    config = {
         'rescale': 1./255,
         'featurewise_center': True,
-        'featurewise_std_normalization': True,
         'zca_whitening': True
-    ]
+    }
     train_generator = utils.fit_flow_from_directory(config, 0.1,
                                                     FLAGS.train_dir,
                                                     FLAGS.max_t_samples_per_dataset,
