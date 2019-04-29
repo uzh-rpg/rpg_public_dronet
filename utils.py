@@ -21,6 +21,7 @@ def fit_flow_from_directory(config, fit_sample_size, directory, max_samples,
                             follow_links=False, nb_windows=25,
                             sample_shape=(255, 340, 1)):
     drone_data_gen = DroneDataGenerator()
+    print("[*] Generating statistically representative samples...")
     batches = drone_data_gen.flow_from_directory(directory, max_samples, target_size,
                                       color_mode, batch_size, shuffle,
                                        seed, follow_links, nb_windows)
@@ -31,8 +32,10 @@ def fit_flow_from_directory(config, fit_sample_size, directory, max_samples,
         index = np.random.choice(imgs.shape[0], int(batch_size*fit_sample_size),
                                 replace=False)
         np.vstack((fit_samples, imgs[index]))
+    print("[*] Fitting the generator on the samples...")
     fit_drone_data_gen = DroneDataGenerator(**config)
     fit_drone_data_gen.fit(fit_samples)
+    print("[*] Done!")
     return fit_drone_data_gen.flow_from_directory(directory, max_samples,
                                                   target_size, color_mode,
                                                   batch_size, shuffle, seed,
@@ -117,7 +120,6 @@ class DroneDirectoryIterator(Iterator):
         self.gt_coord = dict()
         self.ground_truth_rot = []
 
-        print("parsing {}".format(directory))
         self._walk_dir(directory)
 
         # Conversion of list into array
@@ -133,7 +135,6 @@ class DroneDirectoryIterator(Iterator):
             if "annotations.csv" in files:
                 sub_dirs = os.path.relpath(root, path).split('/')
                 sub_dirs = ''.join(sub_dirs)
-                print("parsing subdir {}".format(root))
                 self._parse_dir(root, sub_dirs)
 
     def _parse_dir(self, path, sub_dirs):
