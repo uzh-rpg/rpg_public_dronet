@@ -77,7 +77,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    optimizer = optimizers.Adam(lr=0.005)
+    optimizer = optimizers.Adam(lr=0.003, decay=1e-6)
     # optimizer = optimizers.Adam()
 
     # Configure training process
@@ -132,17 +132,18 @@ def _main():
 
     # Output dimension
     output_dim = FLAGS.nb_windows + 1
-
+    K.clear_session()
     # Generate training data with no real-time augmentation
     # train_datagen = utils.fit_flow_from_directory(rescale=1./255)
-    # train_datagen = utils.DroneDataGenerator(rescale=1./255)
+    train_datagen = utils.DroneDataGenerator(rescale=1./255)
 
     config = {
         'rescale': 1./255,
         'featurewise_center': True,
-        'zca_whitening': True
+        # 'zca_whitening': True
+        'featurewise_std_normalization': True
     }
-    train_generator = utils.fit_flow_from_directory(config, 0.1,
+    train_generator = utils.fit_flow_from_directory(config, 1,
                                                     FLAGS.train_dir,
                                                     FLAGS.max_t_samples_per_dataset,
                                                     shuffle=True,
@@ -151,6 +152,14 @@ def _main():
                                                                  img_height),
                                                     batch_size=FLAGS.batch_size,
                                                     nb_windows=FLAGS.nb_windows)
+#     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
+                                                    # FLAGS.max_t_samples_per_dataset,
+                                                    # shuffle=True,
+                                                    # color_mode=FLAGS.img_mode,
+                                                    # target_size=(img_width,
+                                                                 # img_height),
+                                                    # batch_size=FLAGS.batch_size,
+                                                    # nb_windows=FLAGS.nb_windows)
 
        # Generate validation data with no real-time augmentation
     val_datagen = utils.DroneDataGenerator(rescale=1./255)

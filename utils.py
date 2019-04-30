@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 import json
 
+from tqdm import *
 from math import sqrt
 from time import sleep
 from keras import backend as K
@@ -20,21 +21,23 @@ def fit_flow_from_directory(config, fit_sample_size, directory, max_samples,
                             batch_size=32, shuffle=True, seed=None,
                             follow_links=False, nb_windows=25,
                             sample_shape=(255, 340, 1)):
-    drone_data_gen = DroneDataGenerator()
+    drone_data_gen = DroneDataGenerator(rescale=1./255)
+    fit_drone_data_gen = DroneDataGenerator(**config)
     print("[*] Generating statistically representative samples...")
     batches = drone_data_gen.flow_from_directory(directory, max_samples, target_size,
                                       color_mode, batch_size, shuffle,
                                        seed, follow_links, nb_windows)
-    fit_samples  = np.zeros(shape=sample_shape)
-    fit_samples = np.expand_dims(fit_samples, axis=0)
-    for i in range(int(batches.samples/batch_size)+1):
-        imgs, labels = next(batches)
-        index = np.random.choice(imgs.shape[0], int(batch_size*fit_sample_size),
-                                replace=False)
-        np.vstack((fit_samples, imgs[index]))
     print("[*] Fitting the generator on the samples...")
-    fit_drone_data_gen = DroneDataGenerator(**config)
-    fit_drone_data_gen.fit(fit_samples)
+    for i in tqdm(range(int(batches.samples/batch_size))):
+        imgs, labels = next(batches)
+        if fit_sample_size < 1:
+            index = np.random.choice(imgs.shape[0], int(batch_size*fit_sample_size),
+                                    replace=False)
+            fit_drone_data_gen.fit(imgs[index])
+        else:
+            fit_drone_data_gen.fit(imgs[:])
+    del drone_data_gen
+    del batches
     print("[*] Done!")
     return fit_drone_data_gen.flow_from_directory(directory, max_samples,
                                                   target_size, color_mode,
