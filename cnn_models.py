@@ -94,9 +94,9 @@ def resnet8(img_width, img_height, img_channels, output_dim,
 
     # h_noise = GaussianNoise(0.01)(x)
     h1 = Dense(500, activation='relu', kernel_regularizer=regularizers.l2(0.001))(x)
-    h1 = Dropout(0.3)(h1)
-    h2 = Dense(500, activation='relu', kernel_regularizer=regularizers.l2(0.001))(h1)
-    h2 = Dropout(0.2)(h2)
+    h1 = Dropout(0.4)(h1)
+    h2 = Dense(100, activation='relu', kernel_regularizer=regularizers.l2(0.001))(h1)
+    h2 = Dropout(0.3)(h2)
     # Gate localization
     localization = Dense(output_dim, activation='softmax')(h2) # Logits + Softmax
 

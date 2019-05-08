@@ -144,7 +144,7 @@ def _main():
     # Generate training data with no real-time augmentation
     # train_datagen = utils.fit_flow_from_directory(rescale=1./255)
     train_datagen = utils.DroneDataGenerator(rescale=1./255,
-                                             channel_shift_range=0.15)
+                                             channel_shift_range=0.1)
 
     config = {
         'featurewise_center': True,

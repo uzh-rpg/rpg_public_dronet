@@ -276,14 +276,16 @@ class DroneDirectoryIterator(Iterator):
             x = img_utils.load_img(os.path.join(self.directory, fname),
                                    grayscale=grayscale)
 
-            if self.image_data_generator.channelShiftFactor > 0:
+            # 50% chances of transforming the image
+            shifting = np.random.rand() <= 0.5
+            if shifting and self.image_data_generator.channelShiftFactor > 0:
                 transformed_x = img_utils.random_channel_shift(np.copy(x),
                                                                self.image_data_generator.channelShiftFactor)
             else:
                 transformed_x = x
 
-            if self.image_data_generator.channelShiftFactor > 0 and self.saved_transforms < 50:
-                Image.fromarray(x, "RGB").save(os.path.join(self.directory,
+            if shifting and self.image_data_generator.channelShiftFactor > 0 and self.saved_transforms < 50:
+                Image.fromarray(x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
                                                      "img_transforms",
                                                      "original_{}.jpg".format(self.saved_transforms)))
                 Image.fromarray(transformed_x.astype(np.uint8), "RGB").save(os.path.join(self.directory,

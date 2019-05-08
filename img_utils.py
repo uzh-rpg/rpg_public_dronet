@@ -23,7 +23,7 @@ def load_img(path, grayscale=False):
     else:
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    return np.asarray(img, dtype=np.uint8)
+    return np.asarray(img, dtype=np.float64)
 
 
 def random_channel_shift(img, shiftFactor, channel_axis=2):
