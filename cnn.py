@@ -6,7 +6,7 @@ import sys
 import h5py
 import gflags
 
-from keras.callbacks import ModelCheckpoint, TensorBoard
+from keras.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau
 from keras.metrics import categorical_accuracy, sparse_categorical_accuracy
 from keras import optimizers
 from time import time
@@ -34,8 +34,12 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
     # Returns
        model: A Model instance.
     """
-    model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim,
-                              FLAGS.freeze_filters)
+    if FLAGS.restore_model:
+        model = utils.jsonToModel(os.path.join(FLAGS.experiment_rootdir,
+                                  "model_struct.json"))
+    else:
+        model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim,
+                                  FLAGS.freeze_filters)
     if weights_path:
         try:
             print("Loaded model from {}".format(weights_path))
@@ -77,8 +81,10 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    optimizer = optimizers.Adam(lr=0.003, decay=1e-6)
-    # optimizer = optimizers.Adam()
+    # optimizer = optimizers.Adam(lr=0.00009, decay=1e-6)
+    # optimizer = optimizers.Adam(lr=0.0000008, decay=1e-4)
+    optimizer = optimizers.Adam(lr=0.0001, decay=1e-4)
+
 
     # Configure training process
     model.compile(loss=['categorical_crossentropy'],
@@ -98,6 +104,8 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
                                             period=FLAGS.log_rate,
                                             batch_size=FLAGS.batch_size)
 
+    reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.9,
+                                  patience=3, verbose=1, min_delta=0.05)
     # Train model
     steps_per_epoch = int(np.ceil(train_data_generator.samples / FLAGS.batch_size))
     validation_steps = int(np.ceil(val_data_generator.samples / FLAGS.batch_size))
@@ -107,7 +115,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     model.fit_generator(train_data_generator,
                         epochs=FLAGS.epochs, steps_per_epoch = steps_per_epoch,
                         callbacks=[writeBestModel, saveModelAndLoss,
-                                   tensorboard],
+                                   tensorboard, reduce_lr],
                         validation_data=val_data_generator,
                         validation_steps = validation_steps,
                         initial_epoch=initial_epoch)
@@ -135,16 +143,23 @@ def _main():
     K.clear_session()
     # Generate training data with no real-time augmentation
     # train_datagen = utils.fit_flow_from_directory(rescale=1./255)
-    train_datagen = utils.DroneDataGenerator(rescale=1./255)
+    train_datagen = utils.DroneDataGenerator(rescale=1./255,
+                                             channel_shift_range=0.15)
 
     config = {
-        'rescale': 1./255,
         'featurewise_center': True,
-        # 'zca_whitening': True
         'featurewise_std_normalization': True
     }
-    train_generator = utils.fit_flow_from_directory(config, 1,
-                                                    FLAGS.train_dir,
+#     train_generator, train_mean, train_std = utils.fit_flow_from_directory(config, 1,
+                                                    # FLAGS.train_dir,
+                                                    # FLAGS.max_t_samples_per_dataset,
+                                                    # shuffle=True,
+                                                    # color_mode=FLAGS.img_mode,
+                                                    # target_size=(img_width,
+                                                                 # img_height),
+                                                    # batch_size=FLAGS.batch_size,
+#                                                     nb_windows=FLAGS.nb_windows)
+    train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
                                                     FLAGS.max_t_samples_per_dataset,
                                                     shuffle=True,
                                                     color_mode=FLAGS.img_mode,
@@ -152,17 +167,10 @@ def _main():
                                                                  img_height),
                                                     batch_size=FLAGS.batch_size,
                                                     nb_windows=FLAGS.nb_windows)
-#     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
-                                                    # FLAGS.max_t_samples_per_dataset,
-                                                    # shuffle=True,
-                                                    # color_mode=FLAGS.img_mode,
-                                                    # target_size=(img_width,
-                                                                 # img_height),
-                                                    # batch_size=FLAGS.batch_size,
-                                                    # nb_windows=FLAGS.nb_windows)
 
        # Generate validation data with no real-time augmentation
     val_datagen = utils.DroneDataGenerator(rescale=1./255)
+    # val_datagen = utils.DroneDataGenerator()
 
     val_generator = val_datagen.flow_from_directory(FLAGS.val_dir,
                                                     FLAGS.max_v_samples_per_dataset,
@@ -171,7 +179,10 @@ def _main():
                                                     target_size=(img_width,
                                                                  img_height),
                                                     batch_size = FLAGS.batch_size,
-                                                   nb_windows = FLAGS.nb_windows)
+                                                   nb_windows =
+                                                    FLAGS.nb_windows,
+                                                    mean=None,
+                                                    std=None)
 
     if FLAGS.transfer_learning:
         # Model to transfer from

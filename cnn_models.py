@@ -35,14 +35,14 @@ def resnet8(img_width, img_height, img_channels, output_dim,
     x2 = Activation('relu')(x2)
     x2 = Conv2D(32, (3, 3), strides=[2,2], padding='same',
                 kernel_initializer="he_normal",
-                kernel_regularizer=regularizers.l2(1e-4),
+                kernel_regularizer=regularizers.l2(0.001),
                 trainable=(not freeze_filters))(x2)
 
     x2 = keras.layers.normalization.BatchNormalization()(x2)
     x2 = Activation('relu')(x2)
     x2 = Conv2D(32, (3, 3), padding='same',
                 kernel_initializer="he_normal",
-                kernel_regularizer=regularizers.l2(1e-4),
+                kernel_regularizer=regularizers.l2(0.001),
                 trainable=(not freeze_filters))(x2)
 
     x1 = Conv2D(32, (1, 1), strides=[2,2], padding='same',
@@ -54,14 +54,14 @@ def resnet8(img_width, img_height, img_channels, output_dim,
     x4 = Activation('relu')(x4)
     x4 = Conv2D(64, (3, 3), strides=[2,2], padding='same',
                 kernel_initializer="he_normal",
-                kernel_regularizer=regularizers.l2(1e-4),
+                kernel_regularizer=regularizers.l2(0.001),
                 trainable=(not freeze_filters))(x4)
 
     x4 = keras.layers.normalization.BatchNormalization()(x4)
     x4 = Activation('relu')(x4)
     x4 = Conv2D(64, (3, 3), padding='same',
                 kernel_initializer="he_normal",
-                kernel_regularizer=regularizers.l2(1e-4),
+                kernel_regularizer=regularizers.l2(0.001),
                 trainable=(not freeze_filters))(x4)
 
     x3 = Conv2D(64, (1, 1), strides=[2,2], padding='same',
@@ -73,17 +73,18 @@ def resnet8(img_width, img_height, img_channels, output_dim,
     x6 = Activation('relu')(x6)
     x6 = Conv2D(128, (3, 3), strides=[2,2], padding='same',
                 kernel_initializer="he_normal",
-                kernel_regularizer=regularizers.l2(1e-4),
+                kernel_regularizer=regularizers.l2(0.001),
                 trainable=(not freeze_filters))(x6)
 
     x6 = keras.layers.normalization.BatchNormalization()(x6)
     x6 = Activation('relu')(x6)
     x6 = Conv2D(128, (3, 3), padding='same',
                 kernel_initializer="he_normal",
-                kernel_regularizer=regularizers.l2(1e-4),
+                kernel_regularizer=regularizers.l2(0.001),
                 trainable=(not freeze_filters))(x6)
 
     x5 = Conv2D(128, (1, 1), strides=[2,2], padding='same',
+                kernel_regularizer=regularizers.l2(0.001),
                 trainable=(not freeze_filters))(x5)
     x7 = add([x5, x6])
 
@@ -91,10 +92,13 @@ def resnet8(img_width, img_height, img_channels, output_dim,
     x = Activation('relu')(x)
     x = Dropout(0.5)(x)
 
-    hidden = Dense(256, activation='relu')(x)
-    hidden = Dropout(0.1)(hidden)
+    # h_noise = GaussianNoise(0.01)(x)
+    h1 = Dense(500, activation='relu', kernel_regularizer=regularizers.l2(0.001))(x)
+    h1 = Dropout(0.3)(h1)
+    h2 = Dense(500, activation='relu', kernel_regularizer=regularizers.l2(0.001))(h1)
+    h2 = Dropout(0.2)(h2)
     # Gate localization
-    localization = Dense(output_dim, activation='softmax')(hidden) # Logits + Softmax
+    localization = Dense(output_dim, activation='softmax')(h2) # Logits + Softmax
 
     model = Model(inputs=[img_input], outputs=[localization])
     print(model.summary())

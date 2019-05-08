@@ -6,6 +6,7 @@ import json
 
 from tqdm import *
 from math import sqrt
+from PIL import Image
 from time import sleep
 from keras import backend as K
 from keras.preprocessing.image import Iterator
@@ -21,7 +22,8 @@ def fit_flow_from_directory(config, fit_sample_size, directory, max_samples,
                             batch_size=32, shuffle=True, seed=None,
                             follow_links=False, nb_windows=25,
                             sample_shape=(255, 340, 1)):
-    drone_data_gen = DroneDataGenerator(rescale=1./255)
+    stats_file_path = "statistics.txt"
+    drone_data_gen = DroneDataGenerator()
     fit_drone_data_gen = DroneDataGenerator(**config)
     print("[*] Generating statistically representative samples...")
     batches = drone_data_gen.flow_from_directory(directory, max_samples, target_size,
@@ -38,11 +40,17 @@ def fit_flow_from_directory(config, fit_sample_size, directory, max_samples,
             fit_drone_data_gen.fit(imgs[:])
     del drone_data_gen
     del batches
-    print("[*] Done!")
+    print("[*] Done! Mean: {} - STD: {}".format(fit_drone_data_gen.mean,
+                                                fit_drone_data_gen.std))
+    with open(os.path.join(directory, stats_file_path), "w") as stats_file:
+        stats_file.write("mean: {}".format(fit_drone_data_gen.mean))
+        stats_file.write("std: {}".format(fit_drone_data_gen.std))
+        print("[*] Saved mean and std as {}".format(stats_file_path))
+
     return fit_drone_data_gen.flow_from_directory(directory, max_samples,
                                                   target_size, color_mode,
                                                   batch_size, shuffle, seed,
-                                                  follow_links, nb_windows)
+                                                  follow_links, nb_windows), fit_drone_data_gen.mean, fit_drone_data_gen.std
 
 
 class DroneDataGenerator(ImageDataGenerator):
@@ -56,14 +64,23 @@ class DroneDataGenerator(ImageDataGenerator):
 
     For an example usage, see the evaluate.py script
     """
+    def __init__(self, *args, **kwargs):
+        super(DroneDataGenerator, self).__init__(*args, **kwargs)
+        if 'channel_shift_range' in kwargs:
+            self.channelShiftFactor = kwargs['channel_shift_range']
+        else:
+            self.channelShiftFactor = 0
+
     def flow_from_directory(self, directory, max_samples, target_size=None,
             color_mode='grayscale', batch_size=32,
-            shuffle=True, seed=None, follow_links=False, nb_windows=25):
+            shuffle=True, seed=None, follow_links=False, nb_windows=25,
+                            mean=None, std=None):
         return DroneDirectoryIterator(
                 directory, max_samples, self,
                 target_size=target_size, color_mode=color_mode,
                 batch_size=batch_size, shuffle=shuffle, seed=seed,
-                follow_links=follow_links, nb_windows=nb_windows)
+                follow_links=follow_links, nb_windows=nb_windows, mean=None,
+            std=None)
 
 
 class DroneDirectoryIterator(Iterator):
@@ -99,7 +116,7 @@ class DroneDirectoryIterator(Iterator):
     def __init__(self, directory, max_samples, image_data_generator,
             target_size=None, color_mode='grayscale',
             batch_size=32, shuffle=True, seed=None, follow_links=False,
-                 nb_windows=25):
+                 nb_windows=25, mean=None, std=None):
         self.samples = 0
         self.max_samples = max_samples
         self.formats = {'png', 'jpg'}
@@ -122,6 +139,15 @@ class DroneDirectoryIterator(Iterator):
         self.ground_truth_loc = dict()
         self.gt_coord = dict()
         self.ground_truth_rot = []
+        # For featurewise standardization
+        self.mean = mean
+        self.std = std
+        self.saved_transforms = 0
+        if self.image_data_generator.channelShiftFactor > 0:
+            print("[*] Saving transformed images to {}".format(os.path.join(self.directory,
+                                          "img_transforms")))
+            if not os.path.isdir(os.path.join(self.directory, "img_transforms")):
+                os.mkdir(os.path.join(self.directory, "img_transforms"))
 
         self._walk_dir(directory)
 
@@ -249,9 +275,24 @@ class DroneDirectoryIterator(Iterator):
             fname = self.filenames[j]
             x = img_utils.load_img(os.path.join(self.directory, fname),
                                    grayscale=grayscale)
-            x = self.image_data_generator.standardize(x)
-            batch_x[i] = x
 
+            if self.image_data_generator.channelShiftFactor > 0:
+                transformed_x = img_utils.random_channel_shift(np.copy(x),
+                                                               self.image_data_generator.channelShiftFactor)
+            else:
+                transformed_x = x
+
+            if self.image_data_generator.channelShiftFactor > 0 and self.saved_transforms < 50:
+                Image.fromarray(x, "RGB").save(os.path.join(self.directory,
+                                                     "img_transforms",
+                                                     "original_{}.jpg".format(self.saved_transforms)))
+                Image.fromarray(transformed_x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
+                                                     "img_transforms",
+                                                     "transformed{}.jpg".format(self.saved_transforms)))
+                self.saved_transforms += 1
+
+            self.image_data_generator.standardize(transformed_x)
+            batch_x[i] = transformed_x
             # Build batch of localization and orientation data
             # Get rid of the filename and images/ folder
             sub_dirs_str = os.path.split(os.path.split(fname)[0])[0]
@@ -266,6 +307,8 @@ class DroneDirectoryIterator(Iterator):
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
 
+        if self.mean and self.std:
+            batch_x = (batch_x - self.mean)/(self.std + 1e-6) # Epsilum
         batch_y = batch_localization # TODO: add batch_orientation
         return batch_x, batch_y
 
