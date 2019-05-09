@@ -68,4 +68,4 @@ def add_salt_and_pepper(img, ratio=0.2, amount=0.004):
     coords = [np.random.randint(0, i-1, int(num_salt)) for i in x.shape]
     x[coords[0], coords[1], :] = 0
 
-    return xx
+    return x
