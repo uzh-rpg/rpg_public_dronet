@@ -48,8 +48,8 @@ def add_shade(img, weight=0.75):
     var = 0.1
     sigma = var ** 0.5
 
-    shade = np.random.random(mean, sigma, (img.shape[0], img.shape[1],
-                                 1)).astype(np.float32)
+    shade = np.random.normal(mean, sigma, (img.shape[0], img.shape[1],
+                                 1)).astype(np.float64)
     shade = np.concatenate((shade, shade, shade), axis=2)
     shaded_img = cv2.addWeighted(img, weight, 0.25*shade, 0.25, 0)
 
