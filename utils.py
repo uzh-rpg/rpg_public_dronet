@@ -296,7 +296,7 @@ class DroneDirectoryIterator(Iterator):
 
             shading = np.random.rand() <= 0.5
             if shading and self.image_data_generator.shadingFactor > 0:
-                shaded_x = img_utils.add_shade(img,
+                shaded_x = img_utils.add_shade(shifted_x,
                                                weight=self.image_data_generator.shadingFactor)
             else:
                 shaded_x = shifted_x
@@ -304,7 +304,7 @@ class DroneDirectoryIterator(Iterator):
 
             salting = np.random.rand() <= 0.5
             if salting and self.image_data_generator.saltAndPepperFactor > 0:
-                salted_x = img_utils.add_salt_and_pepper(img,
+                salted_x = img_utils.add_salt_and_pepper(shaded_x,
                                                          amount=self.image_data_generator.saltAndPepperFactor)
             else:
                 salted_x = shaded_x
