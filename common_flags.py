@@ -29,9 +29,9 @@ gflags.DEFINE_bool('freeze_filters', False, 'Wether to freeze the convolution'
 # Files
 gflags.DEFINE_string('experiment_rootdir', "./model", 'Folder '
                      ' containing all the logs, model weights and results')
-gflags.DEFINE_string('train_dir', "./training", 'Folder containing'
+gflags.DEFINE_string('train_dir', "/theos_dataset/training", 'Folder containing'
                      ' training experiments')
-gflags.DEFINE_string('val_dir', "./validation", 'Folder containing'
+gflags.DEFINE_string('val_dir', "/theos_dataset/validation", 'Folder containing'
                      ' validation experiments')
 gflags.DEFINE_string('test_dir', "./testing", 'Folder containing'
                      ' testing experiments')

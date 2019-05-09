@@ -30,7 +30,8 @@ def random_channel_shift(img, shiftFactor, channel_axis=2):
     '''
     For RGB Only
     '''
-    x = np.rollaxis(img, channel_axis, 0)
+    x = img.copy()
+    x = np.rollaxis(x, channel_axis, 0)
     intensity = np.random.randint(-255*shiftFactor, 255*shiftFactor)
     channel_idx = np.random.randint(0, 2)
     min_x, max_x = np.min(x[channel_idx]), np.max(x[channel_idx])
@@ -40,4 +41,31 @@ def random_channel_shift(img, shiftFactor, channel_axis=2):
 
     return x.astype(np.float64)
 
+def add_shade(img, weight=0.75):
+    rows, cols, _ = img.shape
+    # Gaussian distribution parameters
+    mean = 0
+    var = 0.1
+    sigma = var ** 0.5
 
+    shade = np.random.random(mean, sigma, (img.shape[0], img.shape[1],
+                                 1)).astype(np.float32)
+    shade = np.concatenate((shade, shade, shade), axis=2)
+    shaded_img = cv2.addWeighted(img, weight, 0.25*shade, 0.25, 0)
+
+    return shaded_img
+
+def add_salt_and_pepper(img, ratio=0.2, amount=0.004):
+    x = img.copy()
+    num_salt = np.ceil(amount*x.size*ratio)
+    num_pepper = np.ceil(amount*x.size*(1.0-ratio))
+
+    # Add salt
+    coords = [np.random.randint(0, i-1, int(num_salt)) for i in x.shape]
+    x[coords[0], coords[1], :] = 1
+
+    # Add pepper
+    coords = [np.random.randint(0, i-1, int(num_salt)) for i in x.shape]
+    x[coords[0], coords[1], :] = 0
+
+    return xx

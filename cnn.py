@@ -83,7 +83,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
 
     # optimizer = optimizers.Adam(lr=0.00009, decay=1e-6)
     # optimizer = optimizers.Adam(lr=0.0000008, decay=1e-4)
-    optimizer = optimizers.Adam(lr=0.0001, decay=1e-4)
+    optimizer = optimizers.Adam(lr=0.0001, decay=1e-6)
 
 
     # Configure training process
@@ -116,6 +116,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
                         epochs=FLAGS.epochs, steps_per_epoch = steps_per_epoch,
                         callbacks=[writeBestModel, saveModelAndLoss,
                                    tensorboard, reduce_lr],
+                        shuffle=True,
                         validation_data=val_data_generator,
                         validation_steps = validation_steps,
                         initial_epoch=initial_epoch)
@@ -144,7 +145,9 @@ def _main():
     # Generate training data with no real-time augmentation
     # train_datagen = utils.fit_flow_from_directory(rescale=1./255)
     train_datagen = utils.DroneDataGenerator(rescale=1./255,
-                                             channel_shift_range=0.1)
+                                             channel_shift_range=0.15,
+                                            shading_factor=0.75,
+                                            add_salt_and_pepper=0.004)
 
     config = {
         'featurewise_center': True,

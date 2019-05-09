@@ -70,6 +70,14 @@ class DroneDataGenerator(ImageDataGenerator):
             self.channelShiftFactor = kwargs['channel_shift_range']
         else:
             self.channelShiftFactor = 0
+        if 'shading_factor' in kwargs:
+            self.shadingFactor = kwargs['shading_factor']
+        else:
+            self.shadingFactor = 0
+        if 'salt_and_pepper_factor' in kwargs:
+            self.saltAndPepperFactor = kwargs['add_salt_and_pepper_factor']
+        else:
+            self.saltAndPepperFactor = 0
 
     def flow_from_directory(self, directory, max_samples, target_size=None,
             color_mode='grayscale', batch_size=32,
@@ -279,22 +287,36 @@ class DroneDirectoryIterator(Iterator):
             # 50% chances of transforming the image
             shifting = np.random.rand() <= 0.5
             if shifting and self.image_data_generator.channelShiftFactor > 0:
-                transformed_x = img_utils.random_channel_shift(np.copy(x),
-                                                               self.image_data_generator.channelShiftFactor)
+                shifted_x = img_utils.random_channel_shift(x, self.image_data_generator.channelShiftFactor)
             else:
-                transformed_x = x
+                shifted_x = x
+
+            shading = np.random.rand() <= 0.5
+            if shading and self.image_data_generator.shadingFactor > 0:
+                shaded_x = img_utils.add_shade(img,
+                                               weight=self.image_data_generator.shadingFactor)
+            else:
+                shaded_x = shifted_x
+
+
+            salting = np.random.rand() <= 0.5
+            if salting and self.image_data_generator.saltAndPepperFactor > 0:
+                salted_x = img_utils.add_salt_and_pepper(img,
+                                                         amount=self.image_data_generator.saltAndPepperFactor)
+            else:
+                salted_x = shaded_x
 
             if shifting and self.image_data_generator.channelShiftFactor > 0 and self.saved_transforms < 50:
                 Image.fromarray(x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
                                                      "img_transforms",
                                                      "original_{}.jpg".format(self.saved_transforms)))
-                Image.fromarray(transformed_x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
+                Image.fromarray(shifted_x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
                                                      "img_transforms",
                                                      "transformed{}.jpg".format(self.saved_transforms)))
                 self.saved_transforms += 1
 
-            self.image_data_generator.standardize(transformed_x)
-            batch_x[i] = transformed_x
+            self.image_data_generator.standardize(salted_x)
+            batch_x[i] = salted_x
             # Build batch of localization and orientation data
             # Get rid of the filename and images/ folder
             sub_dirs_str = os.path.split(os.path.split(fname)[0])[0]
