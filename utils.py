@@ -65,19 +65,22 @@ class DroneDataGenerator(ImageDataGenerator):
     For an example usage, see the evaluate.py script
     """
     def __init__(self, *args, **kwargs):
-        super(DroneDataGenerator, self).__init__(*args, **kwargs)
         if 'channel_shift_range' in kwargs:
             self.channelShiftFactor = kwargs['channel_shift_range']
+            del kwargs['channel_shift_range']
         else:
             self.channelShiftFactor = 0
         if 'shading_factor' in kwargs:
             self.shadingFactor = kwargs['shading_factor']
+            del kwargs['shading_factor']
         else:
             self.shadingFactor = 0
         if 'salt_and_pepper_factor' in kwargs:
-            self.saltAndPepperFactor = kwargs['add_salt_and_pepper_factor']
+            self.saltAndPepperFactor = kwargs['salt_and_pepper_factor']
+            del kwargs['salt_and_pepper_factor']
         else:
             self.saltAndPepperFactor = 0
+        super(DroneDataGenerator, self).__init__(*args, **kwargs)
 
     def flow_from_directory(self, directory, max_samples, target_size=None,
             color_mode='grayscale', batch_size=32,
