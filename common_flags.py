@@ -60,3 +60,4 @@ gflags.DEFINE_integer('successive_frames', 4, 'number of successive frames to'
                       ' use for the prediction filter (backward and forward)')
 gflags.DEFINE_integer('max_outliers', 3, 'number of successive frames to'
                       ' use for the prediction filter')
+gflags.DEFINE_bool('filter', False, 'use a median filter')

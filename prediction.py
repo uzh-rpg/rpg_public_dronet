@@ -16,8 +16,10 @@ import utils
 import gflags
 import cnn_models
 import numpy as np
+import tensorflow as tf
 
 
+from tqdm import *
 from math import sqrt
 from PIL import Image, ImageDraw
 from keras import backend as K
@@ -26,28 +28,18 @@ from constants import TEST_PHASE
 
 def median_filter(prediction, previous_predictions):
     if len(previous_predictions) < FLAGS.successive_frames:
-        return np.argmax(prediction)
-    window = previous_predictions + [np.argmax(prediction)]
+        return prediction
+    window = previous_predictions + [prediction]
     window.sort()
     return window[int(len(window)/2)]
 
-def save_visual_output(input_img, prediction, index):
-    if FLAGS.img_mode == "rgb":
-        img_mode = "RGB"
-    else:
-        img_mode = "L"
-    input_img *= 255.0/input_img.max()
-    np_array = np.uint8(input_img)
-    img = Image.fromarray(np_array.reshape((np_array.shape[0],
-                                           np_array.shape[1])), mode=img_mode)
-    img = img.convert("RGB")
+def save_visual_output(img, prediction, index):
     draw = ImageDraw.Draw(img)
 
     sqrt_win = int(sqrt(FLAGS.nb_windows))
     window_width = FLAGS.img_width / sqrt_win
     window_height = FLAGS.img_height / sqrt_win
 
-    # pred_window = np.argmax(prediction)
     pred_window = prediction
 
     if pred_window == 0:
@@ -70,27 +62,25 @@ def save_visual_output(input_img, prediction, index):
 
 def _main():
 
-    # Set testing mode (dropout/batchnormalization)
+    # Set testing mode (dropout/batch normalization)
     K.set_learning_phase(TEST_PHASE)
 
     # Input image dimensions
     img_width, img_height = FLAGS.img_width, FLAGS.img_height
-
-    # Generate testing data
-    test_datagen = utils.DroneDataGenerator(rescale=1./255)
-    test_generator = test_datagen.flow_from_directory(FLAGS.test_dir,
-                          shuffle=False,
-                          color_mode=FLAGS.img_mode,
-                          target_size=(FLAGS.img_width, FLAGS.img_height),
-                          batch_size = FLAGS.batch_size,
-                          max_samples=FLAGS.nb_visualizations)
-
-    # Load json and create model
-    # json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)
-    # model = utils.jsonToModel(json_model_path)
     img_channels = 3 if FLAGS.img_mode == "rgb" else 1
     output_dim = FLAGS.nb_windows + 1
-    model = cnn_models.resnet8(FLAGS.img_width, FLAGS.img_height, img_channels, output_dim)
+
+    images = []
+    path = os.path.join(FLAGS.test_dir, "images")
+    print("[*] Loading input images from {}".format(path))
+    for file in sorted(os.listdir(path)):
+        file = os.path.join(path, file)
+        if os.path.isfile(file):
+            images.append(file)
+
+    # Load json and create model
+    json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)
+    model = utils.jsonToModel(json_model_path)
 
     # Load weights
     weights_load_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
@@ -100,35 +90,34 @@ def _main():
     except Exception as e:
         print(e)
 
-
     # Compile model
     model.compile(loss='mse', optimizer='adam')
-
-    # Get predictions and ground truth
-    n_samples = test_generator.samples
-    nb_batches = int(np.ceil(n_samples / FLAGS.batch_size))
-    localization_accuracy = 0
+    graph = tf.get_default_graph()
 
     if (FLAGS.successive_frames % 2) != 0:
         FLAGS.successive_frames -= 1
 
+    print("[*] Generating {} prediction images...".format(len(images)))
     previous_predictions = []
     n = 0
     step = 10
-    for i in range(0, nb_batches, step):
-        inputs, predictions = utils.compute_predictions(
-                model, test_generator, step, verbose = 1)
-
-        for j in range(len(inputs)):
-            filtered_pred = median_filter(predictions[j],
-                                          previous_predictions)
-            if len(previous_predictions) >= FLAGS.successive_frames:
-                del previous_predictions[0]
-            save_visual_output(inputs[j], filtered_pred, n)
-            previous_predictions.append(np.argmax(predictions[j]))
+    with graph.as_default():
+        for image in tqdm(images):
+            img = Image.open(image)
+            np_image = np.array(img).astype(np.float64)
+            np_image *= (1./255.)
+            np_image = np.expand_dims(np_image, axis=0)
+            prediction = np.argmax(model.predict(np_image))
+            if FLAGS.filter:
+                filtered_pred = median_filter(prediction, previous_predictions)
+                if len(previous_predictions) >= FLAGS.successive_frames:
+                    del previous_predictions[0]
+                save_visual_output(img, filtered_pred, n)
+                previous_predictions.append(prediction)
+            else:
+                save_visual_output(img, prediction, n)
             n += 1
 
-    print("[*] Generating {} prediction images...".format(n))
 
 def main(argv):
     # Utility main to load flags
