@@ -49,7 +49,10 @@ def save_visual_output(input_img, prediction, ground_truth, index):
 
     # Draw a green cross at the ground truth location
     if gt_window != 0:
-        window_x = window_width * (gt_window - (sqrt_win * int(gt_window/sqrt_win)) - 1)
+        window_idx = gt_window % sqrt_win
+        if window_idx == 0:
+            window_idx = sqrt_win
+        window_x = (window_idx - 1) * window_width
         window_y = window_height * int(gt_window/sqrt_win)
         draw.rectangle([(window_x, window_y),
                        (window_x + window_width, window_y + window_height)],
@@ -61,7 +64,7 @@ def save_visual_output(input_img, prediction, ground_truth, index):
         # Draw a red square at the estimated region
         window_idx = pred_window % sqrt_win
         if window_idx == 0:
-            window_indx = sqrt_win
+            window_idx = sqrt_win
         window_x = (window_idx - 1) * window_width
         window_y = window_height * int(pred_window/sqrt_win)
         draw.rectangle([(window_x, window_y),

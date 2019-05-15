@@ -1,18 +1,19 @@
+import imgaug.augmenters as iaa
+import tensorflow as tf
+import numpy as np
+import json
 import re
 import os
-import numpy as np
-import tensorflow as tf
-import json
 
 from tqdm import *
 from math import sqrt
 from PIL import Image
 from time import sleep
 from keras import backend as K
-from keras.preprocessing.image import Iterator
-from keras.preprocessing.image import ImageDataGenerator
-from keras.utils.generic_utils import Progbar
 from keras.models import model_from_json
+from keras.preprocessing.image import Iterator
+from keras.utils.generic_utils import Progbar
+from keras.preprocessing.image import ImageDataGenerator
 
 import img_utils
 
@@ -64,34 +65,37 @@ class DroneDataGenerator(ImageDataGenerator):
 
     For an example usage, see the evaluate.py script
     """
-    def __init__(self, *args, **kwargs):
-        if 'channel_shift_range' in kwargs:
-            self.channelShiftFactor = kwargs['channel_shift_range']
-            del kwargs['channel_shift_range']
-        else:
-            self.channelShiftFactor = 0
-        if 'shading_factor' in kwargs:
-            self.shadingFactor = kwargs['shading_factor']
-            del kwargs['shading_factor']
-        else:
-            self.shadingFactor = 0
-        if 'salt_and_pepper_factor' in kwargs:
-            self.saltAndPepperFactor = kwargs['salt_and_pepper_factor']
-            del kwargs['salt_and_pepper_factor']
-        else:
-            self.saltAndPepperFactor = 0
-        super(DroneDataGenerator, self).__init__(*args, **kwargs)
+#     def __init__(self, *args, **kwargs):
+        # if 'channel_shift_range' in kwargs:
+            # self.channelShiftFactor = kwargs['channel_shift_range']
+            # del kwargs['channel_shift_range']
+        # else:
+            # self.channelShiftFactor = 0
+        # if 'shading_factor' in kwargs:
+            # self.shadingFactor = kwargs['shading_factor']
+            # del kwargs['shading_factor']
+        # else:
+            # self.shadingFactor = 0
+        # if 'salt_and_pepper_factor' in kwargs:
+            # self.saltAndPepperFactor = kwargs['salt_and_pepper_factor']
+            # del kwargs['salt_and_pepper_factor']
+        # else:
+            # self.saltAndPepperFactor = 0
+        # super(DroneDataGenerator, self).__init__(*args, **kwargs)
 
     def flow_from_directory(self, directory, max_samples, target_size=None,
-            color_mode='grayscale', batch_size=32,
-            shuffle=True, seed=None, follow_links=False, nb_windows=25,
-                            mean=None, std=None):
-        return DroneDirectoryIterator(
-                directory, max_samples, self,
-                target_size=target_size, color_mode=color_mode,
-                batch_size=batch_size, shuffle=shuffle, seed=seed,
-                follow_links=follow_links, nb_windows=nb_windows, mean=None,
-            std=None)
+                            color_mode='grayscale', batch_size=32,
+                            shuffle=True, seed=None, follow_links=False,
+                            nb_windows=25, mean=None, std=None,
+                            multi_ground_truth=False, augmenter=None):
+        return DroneDirectoryIterator(directory, max_samples, self,
+                                      target_size=target_size,
+                                      color_mode=color_mode,
+                                      batch_size=batch_size, shuffle=shuffle,
+                                      seed=seed, follow_links=follow_links,
+                                      nb_windows=nb_windows, mean=None, std=None,
+                                      multi_ground_truth=multi_ground_truth,
+                                      augmenter=None)
 
 
 class DroneDirectoryIterator(Iterator):
@@ -125,13 +129,14 @@ class DroneDirectoryIterator(Iterator):
     # TODO: Add functionality to save images to have a look at the augmentation
     '''
     def __init__(self, directory, max_samples, image_data_generator,
-            target_size=None, color_mode='grayscale',
-            batch_size=32, shuffle=True, seed=None, follow_links=False,
-                 nb_windows=25, mean=None, std=None):
+                 target_size=None, color_mode='grayscale', batch_size=32,
+                 shuffle=True, seed=None, follow_links=False, nb_windows=25,
+                 mean=None, std=None, multi_ground_truth=False, augmenter=None):
         self.samples = 0
         self.max_samples = max_samples
         self.formats = {'png', 'jpg'}
         self.directory = directory
+        self.augmenter = augmenter
         self.image_data_generator = image_data_generator
         # self.target_size = tuple(target_size)
         self.nb_windows = nb_windows
@@ -153,7 +158,8 @@ class DroneDirectoryIterator(Iterator):
         # For featurewise standardization
         self.mean = mean
         self.std = std
-        self.saved_transforms = 0
+        self.saved_transforms = False
+        self.multi_ground_truth = multi_ground_truth
         if self.image_data_generator.channelShiftFactor > 0:
             print("[*] Saving transformed images to {}".format(os.path.join(self.directory,
                                           "img_transforms")))
@@ -183,6 +189,7 @@ class DroneDirectoryIterator(Iterator):
         rot_annotations = []
         with open(annotations_path, 'r') as annotations_file:
             annotations_file.readline() # Skip the header
+            prev_key = None
             for line in annotations_file:
                 line = line.split(',')
                 frame_no = int(line[0].split('.')[0])
@@ -192,9 +199,23 @@ class DroneDirectoryIterator(Iterator):
                              self.image_shape[0]) and (gate_center[1] >= 0 and
                                                    gate_center[1] <=
                                                    self.image_shape[1])
-                self.ground_truth_loc[key] =\
-                    self._compute_location_labels(line[1:3], on_screen)
+                if not self.multi_ground_truth:
+                    self.ground_truth_loc[key] =\
+                        self._compute_location_labels(line[1:3], on_screen)
                     # self._compute_location_labels(line[1:3], bool(int(float(line[-1]))))
+                else:
+                    """
+                    Read multiple annotations for the same image and use a
+                    multi-hot encoded vector for the ground truth
+                    """
+                    if prev_key is None or prev_key != key:
+                        self.ground_truth_loc[key] = [0 for i in range(self.nb_windows+1)]
+                    self.ground_truth_loc[key] =\
+                        [0 if x==y==1 else x+y for x,y in zip(
+                            self.ground_truth_loc[key],
+                            self._compute_location_labels(line[1:3], on_screen))]
+                    prev_key = key
+
                 self.gt_coord[key] = "{}x{}".format(line[1], line[2])
                 rot_annotations.append(line[3])
 
@@ -287,39 +308,39 @@ class DroneDirectoryIterator(Iterator):
             x = img_utils.load_img(os.path.join(self.directory, fname),
                                    grayscale=grayscale)
 
-            # 50% chances of transforming the image
-            shifting = np.random.rand() <= 0.5
-            if shifting and self.image_data_generator.channelShiftFactor > 0:
-                shifted_x = img_utils.random_channel_shift(x, self.image_data_generator.channelShiftFactor)
-            else:
-                shifted_x = x
+            # # 50% chances of transforming the image
+            # shifting = np.random.rand() <= 0.5
+            # if shifting and self.image_data_generator.channelShiftFactor > 0:
+                # shifted_x = img_utils.random_channel_shift(x, self.image_data_generator.channelShiftFactor)
+            # else:
+                # shifted_x = x
 
-            shading = np.random.rand() <= 0.5
-            if shading and self.image_data_generator.shadingFactor > 0:
-                shaded_x = img_utils.add_shade(shifted_x,
-                                               weight=self.image_data_generator.shadingFactor)
-            else:
-                shaded_x = shifted_x
+            # shading = np.random.rand() <= 0.5
+            # if shading and self.image_data_generator.shadingFactor > 0:
+                # shaded_x = img_utils.add_shade(shifted_x,
+                                               # weight=self.image_data_generator.shadingFactor)
+            # else:
+                # shaded_x = shifted_x
 
 
-            salting = np.random.rand() <= 0.5
-            if salting and self.image_data_generator.saltAndPepperFactor > 0:
-                salted_x = img_utils.add_salt_and_pepper(shaded_x,
-                                                         amount=self.image_data_generator.saltAndPepperFactor)
-            else:
-                salted_x = shaded_x
+            # salting = np.random.rand() <= 0.5
+            # if salting and self.image_data_generator.saltAndPepperFactor > 0:
+                # salted_x = img_utils.add_salt_and_pepper(shaded_x,
+                                                         # amount=self.image_data_generator.saltAndPepperFactor)
+            # else:
+                # salted_x = shaded_x
 
-            if shifting and self.image_data_generator.channelShiftFactor > 0 and self.saved_transforms < 50:
-                Image.fromarray(x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
-                                                     "img_transforms",
-                                                     "original_{}.jpg".format(self.saved_transforms)))
-                Image.fromarray(shifted_x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
-                                                     "img_transforms",
-                                                     "transformed{}.jpg".format(self.saved_transforms)))
-                self.saved_transforms += 1
+            # if shifting and self.image_data_generator.channelShiftFactor > 0 and self.saved_transforms < 50:
+                # Image.fromarray(x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
+                                                     # "img_transforms",
+                                                     # "original_{}.jpg".format(self.saved_transforms)))
+                # Image.fromarray(shifted_x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
+                                                     # "img_transforms",
+                                                     # "transformed{}.jpg".format(self.saved_transforms)))
+                # self.saved_transforms += 1
 
-            self.image_data_generator.standardize(salted_x)
-            batch_x[i] = salted_x
+            self.image_data_generator.standardize(x)
+            batch_x[i] = x
             # Build batch of localization and orientation data
             # Get rid of the filename and images/ folder
             sub_dirs_str = os.path.split(os.path.split(fname)[0])[0]
@@ -333,6 +354,12 @@ class DroneDirectoryIterator(Iterator):
                 batch_localization[i, 0] = 0
             batch_orientation[i, 0] = 0.0
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
+
+        # Augmentation
+        if not self.saved_transforms:
+            self.augmenter.show_grid(batch_x, cols=32, rows=32)
+            self.saved_transforms = True
+        batch_x = self.augmenter.augment_images(batch_x)
 
         if self.mean and self.std:
             batch_x = (batch_x - self.mean)/(self.std + 1e-6) # Epsilum

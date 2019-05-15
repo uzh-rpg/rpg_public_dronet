@@ -103,8 +103,9 @@ def _main():
     step = 10
     with graph.as_default():
         for image in tqdm(images):
-            img = Image.open(image)
-            np_image = np.array(img).astype(np.float64)
+            img = Image.open(image).convert("RGB")
+            np_image = np.array(img)
+            np_image = np_image.astype(np.float64)
             np_image *= (1./255.)
             np_image = np.expand_dims(np_image, axis=0)
             prediction = np.argmax(model.predict(np_image))

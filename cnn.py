@@ -1,3 +1,4 @@
+import imgaug.augmenters as iaa
 import tensorflow as tf
 import numpy as np
 import cv2
@@ -39,8 +40,7 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
                                   "model_struct.json"))
     else:
         # model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim,
-                                  # FLAGS.freeze_filters)
-        # model = cnn_models.resnet50(img_width, img_height, img_channels, output_dim)
+        #                           FLAGS.freeze_filters)
         model = cnn_models.mobilenet_v2(img_width, img_height, img_channels, output_dim)
     if weights_path:
         try:
@@ -83,9 +83,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    # optimizer = optimizers.Adam(lr=0.00009, decay=1e-6)
-    # optimizer = optimizers.Adam(lr=0.0000008, decay=1e-4)
-    optimizer = optimizers.Adam(decay=1e-4)
+    optimizer = optimizers.Adam(decay=1e-3)
 
 
     # Configure training process
@@ -146,9 +144,9 @@ def _main():
     # Generate training data with no real-time augmentation
     # train_datagen = utils.fit_flow_from_directory(rescale=1./255)
     train_datagen = utils.DroneDataGenerator(rescale=1./255)
-                                             # channel_shift_range=0.1,
-                                            # shading_factor=0.75,
-                                            # salt_and_pepper_factor=0.004)
+                                #              channel_shift_range=0.1,
+                                             # shading_factor=0.5,
+                                #              salt_and_pepper_factor=0.004)
 
     config = {
         'featurewise_center': True,
@@ -163,7 +161,11 @@ def _main():
                                                                  # img_height),
                                                     # batch_size=FLAGS.batch_size,
 #                                                     nb_windows=FLAGS.nb_windows)
-    print("[*] Using max {} samples per training dataset".format(FLAGS.max_t_samples_per_dataset))
+    if FLAGS.max_t_samples_per_dataset:
+        print("[*] Using max {} samples per training dataset".format(FLAGS.max_t_samples_per_dataset))
+    seq = iaa.Sequential([
+        iaa.Sometimes(0.5, iaa.MotionBlur(k=5, angle=72))
+    ])
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
                                                     FLAGS.max_t_samples_per_dataset,
                                                     shuffle=True,
@@ -171,7 +173,8 @@ def _main():
                                                     target_size=(img_width,
                                                                  img_height),
                                                     batch_size=FLAGS.batch_size,
-                                                    nb_windows=FLAGS.nb_windows)
+                                                    nb_windows=FLAGS.nb_windows,
+                                                    augmenter=seq)
 
        # Generate validation data with no real-time augmentation
     val_datagen = utils.DroneDataGenerator(rescale=1./255)
@@ -208,9 +211,10 @@ def _main():
 
     # Define model
     model = getModel(img_width, img_height, img_channels,
-                     output_dim, weights_path,
+                        output_dim, weights_path,
                      transfer=FLAGS.transfer_learning,
                      transfer_from=model_path)
+
     # Serialize model into json
     json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)
     utils.modelToJson(model, json_model_path)
