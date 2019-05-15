@@ -164,7 +164,11 @@ def _main():
     if FLAGS.max_t_samples_per_dataset:
         print("[*] Using max {} samples per training dataset".format(FLAGS.max_t_samples_per_dataset))
     seq = iaa.Sequential([
-        iaa.Sometimes(0.5, iaa.MotionBlur(k=5, angle=72))
+        iaa.Sometimes(0.5, iaa.MotionBlur(k=(5, 7), angle=(0, 360))),
+        iaa.Sometimes(0.5, iaa.OneOf([
+            iaa.GammaContrast(gamma=(0.5, 1.5)),
+            iaa.ChannelShuffle()
+        ]))
     ])
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
                                                     FLAGS.max_t_samples_per_dataset,

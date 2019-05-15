@@ -95,7 +95,7 @@ class DroneDataGenerator(ImageDataGenerator):
                                       seed=seed, follow_links=follow_links,
                                       nb_windows=nb_windows, mean=None, std=None,
                                       multi_ground_truth=multi_ground_truth,
-                                      augmenter=None)
+                                      augmenter=augmenter)
 
 
 class DroneDirectoryIterator(Iterator):
@@ -158,9 +158,9 @@ class DroneDirectoryIterator(Iterator):
         # For featurewise standardization
         self.mean = mean
         self.std = std
-        self.saved_transforms = False
+        self.saved_transforms = 0
         self.multi_ground_truth = multi_ground_truth
-        if self.image_data_generator.channelShiftFactor > 0:
+        if self.augmenter:
             print("[*] Saving transformed images to {}".format(os.path.join(self.directory,
                                           "img_transforms")))
             if not os.path.isdir(os.path.join(self.directory, "img_transforms")):
@@ -356,10 +356,17 @@ class DroneDirectoryIterator(Iterator):
             # batch_orientation[i, 1] = self.ground_truth_rot[fname]
 
         # Augmentation
-        if not self.saved_transforms:
-            self.augmenter.show_grid(batch_x, cols=32, rows=32)
-            self.saved_transforms = True
-        batch_x = self.augmenter.augment_images(batch_x)
+        if self.augmenter:
+            batch_x = self.augmenter.augment_images(batch_x)
+            if self.saved_transforms < 10:
+                print("[*] Saving augmentations...")
+                aug_grid = self.augmenter.draw_grid([(batch_x[0]*255).astype(np.uint8),
+                                                     (batch_x[1]*255).astype(np.uint8)],
+                                                    cols=4, rows=2)
+                Image.fromarray(aug_grid).save(
+                    os.path.join(self.directory, "img_transforms",
+                                 "grid_aug{}.jpg".format(self.saved_transforms)))
+                self.saved_transforms += 1
 
         if self.mean and self.std:
             batch_x = (batch_x - self.mean)/(self.std + 1e-6) # Epsilum

@@ -137,9 +137,9 @@ def mobilenet_v2(img_width, img_height, img_channels, output_dim):
     # Input
     # Swap width and height because the numpy shape is (rows x cols)
     img_input = Input(shape=(img_height, img_width, img_channels))
-    input_noised = GaussianNoise(0.1)(img_input)
+    input_noised = GaussianNoise(0.05)(img_input)
     model = MobileNetV2(include_top=False, weights='imagenet',
-                        input_tensor=img_input, alpha=0.35,
+                        input_tensor=img_input, alpha=1.0,
                         input_shape=(img_height, img_width, img_channels))
     x = model.output
     x = Flatten()(x)
