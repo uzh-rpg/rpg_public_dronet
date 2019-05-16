@@ -165,9 +165,10 @@ def _main():
         print("[*] Using max {} samples per training dataset".format(FLAGS.max_t_samples_per_dataset))
     seq = iaa.Sequential([
         iaa.Sometimes(0.75, iaa.MotionBlur(k=(3, 13), angle=(0, 360))),
-        iaa.AdditiveGaussianNoise(scale=(0.0, 0.1*255)),
+        iaa.Sometimes(0.9, iaa.AdditiveGaussianNoise(scale=(0.0, 0.1*255))),
         iaa.Sometimes(0.5, iaa.OneOf([
             iaa.GammaContrast(gamma=(0.5, 1.5)),
+            iaa.Grayscale(alpha=(0.0, 1.0)),
             iaa.ChannelShuffle()
         ]))
     ])
