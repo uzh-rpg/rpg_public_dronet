@@ -83,7 +83,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    optimizer = optimizers.Adam(decay=1e-3)
+    optimizer = optimizers.Adam(decay=1e-4)
 
 
     # Configure training process
@@ -105,7 +105,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
                                             batch_size=FLAGS.batch_size)
 
     reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.9,
-                                  patience=5, verbose=1)
+                                  patience=3, verbose=1)
     # Train model
     steps_per_epoch = int(np.ceil(train_data_generator.samples / FLAGS.batch_size))
     validation_steps = int(np.ceil(val_data_generator.samples / FLAGS.batch_size))
@@ -164,7 +164,8 @@ def _main():
     if FLAGS.max_t_samples_per_dataset:
         print("[*] Using max {} samples per training dataset".format(FLAGS.max_t_samples_per_dataset))
     seq = iaa.Sequential([
-        iaa.Sometimes(0.5, iaa.MotionBlur(k=(5, 7), angle=(0, 360))),
+        iaa.Sometimes(0.75, iaa.MotionBlur(k=(3, 13), angle=(0, 360))),
+        iaa.AdditiveGaussianNoise(scale=(0.0, 0.1*255)),
         iaa.Sometimes(0.5, iaa.OneOf([
             iaa.GammaContrast(gamma=(0.5, 1.5)),
             iaa.ChannelShuffle()

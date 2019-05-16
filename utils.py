@@ -307,39 +307,6 @@ class DroneDirectoryIterator(Iterator):
             fname = self.filenames[j]
             x = img_utils.load_img(os.path.join(self.directory, fname),
                                    grayscale=grayscale)
-
-            # # 50% chances of transforming the image
-            # shifting = np.random.rand() <= 0.5
-            # if shifting and self.image_data_generator.channelShiftFactor > 0:
-                # shifted_x = img_utils.random_channel_shift(x, self.image_data_generator.channelShiftFactor)
-            # else:
-                # shifted_x = x
-
-            # shading = np.random.rand() <= 0.5
-            # if shading and self.image_data_generator.shadingFactor > 0:
-                # shaded_x = img_utils.add_shade(shifted_x,
-                                               # weight=self.image_data_generator.shadingFactor)
-            # else:
-                # shaded_x = shifted_x
-
-
-            # salting = np.random.rand() <= 0.5
-            # if salting and self.image_data_generator.saltAndPepperFactor > 0:
-                # salted_x = img_utils.add_salt_and_pepper(shaded_x,
-                                                         # amount=self.image_data_generator.saltAndPepperFactor)
-            # else:
-                # salted_x = shaded_x
-
-            # if shifting and self.image_data_generator.channelShiftFactor > 0 and self.saved_transforms < 50:
-                # Image.fromarray(x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
-                                                     # "img_transforms",
-                                                     # "original_{}.jpg".format(self.saved_transforms)))
-                # Image.fromarray(shifted_x.astype(np.uint8), "RGB").save(os.path.join(self.directory,
-                                                     # "img_transforms",
-                                                     # "transformed{}.jpg".format(self.saved_transforms)))
-                # self.saved_transforms += 1
-
-            self.image_data_generator.standardize(x)
             batch_x[i] = x
             # Build batch of localization and orientation data
             # Get rid of the filename and images/ folder
@@ -357,20 +324,24 @@ class DroneDirectoryIterator(Iterator):
 
         # Augmentation
         if self.augmenter:
-            batch_x = self.augmenter.augment_images(batch_x)
+            batch_x = self.augmenter.augment_images(batch_x.astype(np.uint8))
             if self.saved_transforms < 10:
                 print("[*] Saving augmentations...")
-                aug_grid = self.augmenter.draw_grid([(batch_x[0]*255).astype(np.uint8),
-                                                     (batch_x[1]*255).astype(np.uint8)],
+                aug_grid = self.augmenter.draw_grid([batch_x[0], batch_x[1]],
                                                     cols=4, rows=2)
                 Image.fromarray(aug_grid).save(
                     os.path.join(self.directory, "img_transforms",
                                  "grid_aug{}.jpg".format(self.saved_transforms)))
                 self.saved_transforms += 1
 
+        # Apply standardization *after* augmentation
+        batch_x = batch_x.astype(np.float64, copy=False)
+        self.image_data_generator.standardize(batch_x)
+
         if self.mean and self.std:
             batch_x = (batch_x - self.mean)/(self.std + 1e-6) # Epsilum
         batch_y = batch_localization # TODO: add batch_orientation
+
         return batch_x, batch_y
 
 
