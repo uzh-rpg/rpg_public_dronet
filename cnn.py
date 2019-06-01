@@ -39,9 +39,13 @@ def getModel(img_width, img_height, img_channels, output_dim, weights_path,
         model = utils.jsonToModel(os.path.join(FLAGS.experiment_rootdir,
                                   "model_struct.json"))
     else:
-        # model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim,
-        #                           FLAGS.freeze_filters)
-        model = cnn_models.mobilenet_v2(img_width, img_height, img_channels, output_dim)
+#         model = cnn_models.resnet8(img_width, img_height, img_channels, output_dim,
+                                   # FLAGS.freeze_filters, FLAGS.higher_l2,
+#                                    FLAGS.hidden_dropout)
+        model = cnn_models.mobilenet_v2(img_width, img_height, img_channels,
+                                        output_dim, FLAGS.alpha,
+                                        FLAGS.hidden_dropout, FLAGS.pooling,
+                                        FLAGS.dropout)
     if weights_path:
         try:
             print("Loaded model from {}".format(weights_path))
@@ -83,7 +87,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
     # model.k_mse = tf.Variable(FLAGS.batch_size, trainable=False, name='k_mse', dtype=tf.int32)
     model.k_entropy = tf.Variable(FLAGS.batch_size, trainable=False, name='k_entropy', dtype=tf.int32)
 
-    optimizer = optimizers.Adam(decay=1e-4)
+    optimizer = optimizers.Adam()
 
 
     # Configure training process
@@ -105,7 +109,7 @@ def trainModel(train_data_generator, val_data_generator, model, initial_epoch):
                                             batch_size=FLAGS.batch_size)
 
     reduce_lr = ReduceLROnPlateau(monitor="val_loss", factor=0.9,
-                                  patience=3, verbose=1)
+                                  patience=3, verbose=1, min_delta=0.02)
     # Train model
     steps_per_epoch = int(np.ceil(train_data_generator.samples / FLAGS.batch_size))
     validation_steps = int(np.ceil(val_data_generator.samples / FLAGS.batch_size))
@@ -163,15 +167,18 @@ def _main():
 #                                                     nb_windows=FLAGS.nb_windows)
     if FLAGS.max_t_samples_per_dataset:
         print("[*] Using max {} samples per training dataset".format(FLAGS.max_t_samples_per_dataset))
-    seq = iaa.Sequential([
-        iaa.Sometimes(0.75, iaa.MotionBlur(k=(3, 13), angle=(0, 360))),
-        iaa.Sometimes(0.9, iaa.AdditiveGaussianNoise(scale=(0.0, 0.1*255))),
-        iaa.Sometimes(0.5, iaa.OneOf([
-            iaa.GammaContrast(gamma=(0.5, 1.5)),
-            iaa.Grayscale(alpha=(0.0, 1.0)),
-            iaa.ChannelShuffle()
-        ]))
-    ])
+
+    seq = None
+    if FLAGS.augment:
+        seq = iaa.Sequential([
+            iaa.Sometimes(0.75, iaa.MotionBlur(k=(3, 11), angle=(0, 360))),
+            iaa.Sometimes(0.6, iaa.AdditiveGaussianNoise(scale=(0.0, 0.03*255))),
+            iaa.Sometimes(0.5, iaa.OneOf([
+                iaa.GammaContrast(gamma=(0.2, 1.2)),
+                iaa.Grayscale(alpha=(0.0, 1.0)),
+                iaa.ChannelShuffle()
+            ]))
+        ])
     train_generator = train_datagen.flow_from_directory(FLAGS.train_dir,
                                                     FLAGS.max_t_samples_per_dataset,
                                                     shuffle=True,

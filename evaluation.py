@@ -25,12 +25,11 @@ from common_flags import FLAGS
 from constants import TEST_PHASE
 
 
-def compute_gate_localization_accuracy(predictions, ground_truth):
+def compute_gate_localization_accuracy(predictions, ground_truth, topn=1):
     valid = 0
     for i, pred in enumerate(predictions):
-        pred_clean = np.zeros(len(pred))
-        pred_clean[np.argmax(pred)] = 1.0
-        if np.array_equal(pred_clean, ground_truth[i]):
+        indices = np.argpartition(pred, -topn)[-topn:]
+        if np.argwhere(ground_truth[i]) in indices:
             valid += 1
 
     return int((valid / len(predictions)) * 100)
@@ -126,16 +125,22 @@ def _main():
                 model, test_generator, step, verbose = 1)
 
         for j in range(len(inputs)):
-            save_visual_output(inputs[j], predictions[j], ground_truth[j], n)
+            if FLAGS.save_visual:
+                save_visual_output(inputs[j], predictions[j], ground_truth[j], n)
             all_predictions.append(predictions[j])
             all_ground_truth.append(ground_truth[j])
             n += 1
 
     localization_accuracy = compute_gate_localization_accuracy(all_predictions,
-                                                           all_ground_truth)
+                                                               all_ground_truth,
+                                                               topn=FLAGS.topn)
 
     print("[*] Gate localization accuracy: {}%".format(localization_accuracy))
-    print("[*] Generating {} prediction images...".format(FLAGS.nb_visualizations))
+    with open("topn-accuracy-results.txt", "a") as f:
+        f.write("{}%\n".format(localization_accuracy))
+
+    if FLAGS.save_visual:
+        print("[*] Generating {} prediction images...".format(FLAGS.nb_visualizations))
 
 def main(argv):
     # Utility main to load flags

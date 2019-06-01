@@ -62,3 +62,13 @@ gflags.DEFINE_integer('max_outliers', 3, 'number of successive frames to'
                       ' use for the prediction filter')
 gflags.DEFINE_bool('filter', False, 'use a median filter')
 gflags.DEFINE_bool('save_visual', False, 'whether to save annotated images')
+
+
+# TMP
+gflags.DEFINE_bool('hidden_dropout', False, 'mind your own business')
+gflags.DEFINE_bool('dropout', False, 'mind your own business')
+gflags.DEFINE_bool('higher_l2', False, 'mind your own business')
+gflags.DEFINE_bool('augment', False, 'mind your own business')
+gflags.DEFINE_string('pooling', None, 'mind your own biz')
+gflags.DEFINE_float('alpha', 0.35, 'mind your bizz')
+gflags.DEFINE_integer('topn', 1, 'likujiji')
