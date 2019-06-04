@@ -93,13 +93,10 @@ def _main():
                           max_samples=FLAGS.nb_visualizations)
 
     # Load json and create model
-    # json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)
-    # model = utils.jsonToModel(json_model_path)
     img_channels = 3 if FLAGS.img_mode == "rgb" else 1
     output_dim = FLAGS.nb_windows + 1
-    model = cnn_models.resnet8(FLAGS.img_width, FLAGS.img_height, img_channels, output_dim)
-
-    # Load weights
+    json_model_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.json_model_fname)
+    model = utils.jsonToModel(json_model_path)
     weights_load_path = os.path.join(FLAGS.experiment_rootdir, FLAGS.weights_fname)
     try:
         model.load_weights(weights_load_path)
